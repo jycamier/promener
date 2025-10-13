@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go get:*)",
+      "Bash(go:*)",
+      "Bash(./promener generate:*)",
+      "Bash(cat:*)",
+      "Bash(./promener:*)",
+      "Bash(open testdata/metrics_docs.html)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
