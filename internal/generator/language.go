@@ -8,12 +8,14 @@ type Language string
 const (
 	LanguageGo     Language = "go"
 	LanguageDotNet Language = "dotnet"
+	LanguageNodeJS Language = "nodejs"
 )
 
 // Valid languages
 var validLanguages = []Language{
 	LanguageGo,
 	LanguageDotNet,
+	LanguageNodeJS,
 }
 
 // IsValid checks if a language is valid
@@ -44,7 +46,7 @@ func ValidLanguages() []string {
 func ParseLanguage(s string) (Language, error) {
 	lang := Language(s)
 	if !lang.IsValid() {
-		return "", fmt.Errorf("invalid language: %s (valid options: go, dotnet)", s)
+		return "", fmt.Errorf("invalid language: %s (valid options: go, dotnet, nodejs)", s)
 	}
 	return lang, nil
 }
@@ -56,6 +58,8 @@ func (l Language) DefaultFileExtension() string {
 		return ".go"
 	case LanguageDotNet:
 		return ".cs"
+	case LanguageNodeJS:
+		return ".ts"
 	default:
 		return ""
 	}
