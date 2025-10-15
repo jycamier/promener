@@ -1,13 +1,15 @@
 # Promener
 
-A code generator for Prometheus metrics that creates type-safe, organized Go code from YAML specifications.
+A code generator for Prometheus metrics that creates type-safe, organized code from YAML specifications.
+Supports **Go** and **.NET (C#)**.
 
 ## Features
 
 - 📝 **YAML-based specifications** - Define metrics using an OpenAPI-inspired format
+- 🌐 **Multi-language support** - Generate code for **Go** and **.NET (C#)**
 - 🏗️ **Organized structure** - Metrics grouped by namespace and subsystem
 - 🔒 **Type-safe facades** - Generated methods with typed parameters
-- 💉 **Dependency injection ready** - Supports custom Prometheus registerers with Uber FX
+- 💉 **Dependency injection ready** - Supports Uber FX (Go) and Microsoft.Extensions.DependencyInjection (.NET)
 - 🔄 **Thread-safe initialization** - Uses `sync.Once` for safe concurrent access
 - 📊 **All metric types** - Counter, Gauge, Histogram, and Summary
 - 🏷️ **Constant labels** - Support for static and environment variable-based labels
@@ -96,53 +98,42 @@ metrics:
       version: "1.0.0"
 ```
 
-### 2. Generate Go code
+### 2. Generate code for your target language
 
-**Option A: Using CLI directly**
-
-```bash
-promener generate -i metrics.yaml -o metrics/metrics.go
-```
-
-**Option B: Using go:generate with go run**
-
-Create a file `metrics/doc.go`:
-
-```go
-package metrics
-
-//go:generate go run github.com/jycamier/promener generate -i ../metrics.yaml -o metrics_gen.go --fx
-```
-
-Then run:
+#### For Go:
 
 ```bash
-go generate ./metrics
+promener generate -i metrics.yaml -o metrics/metrics.go -l go
 ```
 
-**Option C: Using go:generate with installed tool**
-
-Create a file `metrics/doc.go`:
-
-```go
-package metrics
-
-//go:generate promener generate -i ../metrics.yaml -o metrics_gen.go --fx
-```
-
-Then run:
+With Uber FX support:
 
 ```bash
-go generate ./metrics
+promener generate -i metrics.yaml -o metrics/metrics.go -l go --fx
+```
+
+#### For .NET (C#):
+
+```bash
+promener generate -i metrics.yaml -o Metrics/Metrics.cs -l dotnet
+```
+
+With Dependency Injection extensions:
+
+```bash
+promener generate -i metrics.yaml -o Metrics/Metrics.cs -l dotnet --di
 ```
 
 **Additional options:**
 
-- Override package name: `-p mymetrics`
-- Generate FX module: `--fx`
-- Example: `promener generate -i metrics.yaml -o metrics.go -p mymetrics --fx`
+- Specify language: `-l go` or `-l dotnet`
+- Override package/namespace name: `-p mymetrics`
+- Generate FX module (Go only): `--fx`
+- Generate DI extensions (.NET only): `--di`
 
 ### 3. Use in your application
+
+#### Go Example
 
 ```go
 package main
@@ -177,6 +168,65 @@ func main() {
 
     http.ListenAndServe(":8080", nil)
 }
+```
+
+#### .NET Example
+
+```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Prometheus;
+using YourNamespace.Metrics;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register metrics with dependency injection
+builder.Services.AddMetrics();
+
+var app = builder.Build();
+
+// Expose metrics endpoint
+app.MapMetrics();
+
+// Use metrics in your endpoints
+app.MapGet("/api", (IHttpServerMetrics metrics) =>
+{
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+    // Your endpoint logic
+    var result = "OK";
+
+    // Record metrics
+    stopwatch.Stop();
+    metrics.IncRequestsTotal("GET", "200", "/api");
+    metrics.ObserveRequestDurationSeconds("GET", "/api", stopwatch.Elapsed.TotalSeconds);
+
+    return result;
+});
+
+app.Run();
+```
+
+Alternatively, use the singleton pattern without DI:
+
+```csharp
+using Prometheus;
+using YourNamespace.Metrics;
+
+var app = WebApplication.CreateBuilder(args).Build();
+
+// Get the default singleton instance
+var metrics = MetricsRegistry.Default;
+
+app.MapMetrics();
+
+app.MapGet("/api", () =>
+{
+    metrics.HttpServer.IncRequestsTotal("GET", "200", "/api");
+    return "OK";
+});
+
+app.Run();
 ```
 
 ## Documentation
@@ -280,9 +330,26 @@ promener generate [flags]
 
 Flags:
   -i, --input string    Input YAML specification file (required)
-  -o, --output string   Output Go file (required)
-  -p, --package string  Override package name (optional)
-  --fx                  Generate Uber FX module (optional)
+  -o, --output string   Output file (required)
+  -l, --lang string     Target language: go, dotnet (default: go)
+  -p, --package string  Override package/namespace name (optional)
+  --fx                  Generate Uber FX module (Go only, optional)
+  --di                  Generate Dependency Injection extensions (.NET only, optional)
+```
+
+Examples:
+```bash
+# Generate Go code
+promener generate -i metrics.yaml -o metrics.go -l go
+
+# Generate Go code with Uber FX
+promener generate -i metrics.yaml -o metrics.go -l go --fx
+
+# Generate .NET code
+promener generate -i metrics.yaml -o Metrics.cs -l dotnet
+
+# Generate .NET code with DI extensions
+promener generate -i metrics.yaml -o Metrics.cs -l dotnet --di
 ```
 
 ### HTML Documentation Command

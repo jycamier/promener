@@ -30,23 +30,25 @@ type Subsystem struct {
 
 // MetricData contains all information needed to generate a metric
 type MetricData struct {
-	Name             string
-	Namespace        string
-	Subsystem        string
-	Type             string
-	Help             string
-	Labels           []string
-	Buckets          []float64
-	Objectives       map[float64]float64
-	ConstLabels      map[string]EnvVarValue
-	FieldName        string
-	MethodName       string
-	MethodParams     string
-	MethodArgs       string
-	FullName         string
-	VecType          string
-	OptsType         string
-	Constructor      string
+	Name                string
+	Namespace           string
+	Subsystem           string
+	Type                string
+	Help                string
+	Labels              []string
+	Buckets             []float64
+	Objectives          map[float64]float64
+	ConstLabels         map[string]EnvVarValue
+	FieldName           string
+	MethodName          string
+	MethodParams        string
+	MethodArgs          string
+	DotNetMethodParams  string
+	DotNetMethodArgs    string
+	FullName            string
+	VecType             string
+	OptsType            string
+	Constructor         string
 }
 
 // toCamelCase converts a snake_case string to CamelCase
@@ -135,7 +137,7 @@ func buildTemplateData(spec *domain.Specification) *TemplateData {
 			metricData.Constructor = "prometheus.NewSummaryVec"
 		}
 
-		// Build method parameters and arguments
+		// Build method parameters and arguments for Go
 		var params []string
 		var args []string
 		labelNames := metric.GetLabelNames()
@@ -146,6 +148,17 @@ func buildTemplateData(spec *domain.Specification) *TemplateData {
 		}
 		metricData.MethodParams = strings.Join(params, ", ")
 		metricData.MethodArgs = strings.Join(args, ", ")
+
+		// Build method parameters and arguments for .NET
+		var dotnetParams []string
+		var dotnetArgs []string
+		for _, label := range labelNames {
+			paramName := toLowerCamelCase(label)
+			dotnetParams = append(dotnetParams, fmt.Sprintf("string %s", paramName))
+			dotnetArgs = append(dotnetArgs, paramName)
+		}
+		metricData.DotNetMethodParams = strings.Join(dotnetParams, ", ")
+		metricData.DotNetMethodArgs = strings.Join(dotnetArgs, ", ")
 
 		nsMap[ns][ss] = append(nsMap[ns][ss], metricData)
 	}
