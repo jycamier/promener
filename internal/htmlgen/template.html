@@ -25,6 +25,17 @@
                     <p class="text-sm text-gray-600 dark:text-gray-400">Version {{.Info.Version}}</p>
                 </div>
                 <div class="flex items-center gap-4">
+                    {{if gt (len .Services) 1}}
+                    <!-- Service selector (only shown when multiple services) -->
+                    <select
+                        x-model="selectedService"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        {{range .Services}}
+                        <option value="{{.Name}}">{{.Info.Title}}</option>
+                        {{end}}
+                    </select>
+                    {{end}}
                     <!-- Search -->
                     <input
                         type="text"
@@ -44,6 +55,32 @@
             </div>
         </div>
     </header>
+
+    <!-- Service info -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <template x-for="service in services" :key="service.name">
+                <div x-show="selectedService === service.name">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="service.info.Title"></h2>
+                        <span class="text-xs text-gray-500 dark:text-gray-400" x-text="'v' + service.info.Version"></span>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-4" x-show="service.info.Description" x-text="service.info.Description"></p>
+                    <div x-show="service.servers && service.servers.length > 0" class="flex flex-wrap gap-2">
+                        <template x-for="server in service.servers" :key="server.url">
+                            <a :href="server.url" target="_blank"
+                               class="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors group">
+                                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                <span class="text-xs font-medium text-gray-700 dark:text-gray-200" x-text="server.description || server.url"></span>
+                            </a>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -249,15 +286,23 @@
                 ? savedMode === 'true'
                 : window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+            const services = {{.ServicesJSON}};
+
             return {
                 search: '',
                 darkMode: initialDarkMode,
-                metrics: {{.MetricsJSON}},
+                services: services,
+                selectedService: services.length > 0 ? services[0].name : null,
+
+                get currentMetrics() {
+                    const service = this.services.find(s => s.name === this.selectedService);
+                    return service ? service.metrics : [];
+                },
 
                 get filteredMetrics() {
-                    if (!this.search) return this.metrics;
+                    if (!this.search) return this.currentMetrics;
                     const query = this.search.toLowerCase();
-                    return this.metrics.filter(m =>
+                    return this.currentMetrics.filter(m =>
                         m.fullName.toLowerCase().includes(query) ||
                         m.help.toLowerCase().includes(query) ||
                         m.type.toLowerCase().includes(query)
