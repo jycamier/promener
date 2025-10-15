@@ -45,6 +45,8 @@ type MetricData struct {
 	MethodArgs          string
 	DotNetMethodParams  string
 	DotNetMethodArgs    string
+	NodeJSMethodParams  string
+	NodeJSType          string
 	FullName            string
 	VecType             string
 	OptsType            string
@@ -159,6 +161,14 @@ func buildTemplateData(spec *domain.Specification) *TemplateData {
 		}
 		metricData.DotNetMethodParams = strings.Join(dotnetParams, ", ")
 		metricData.DotNetMethodArgs = strings.Join(dotnetArgs, ", ")
+
+		// Build method parameters for Node.js/TypeScript
+		var nodejsParams []string
+		for _, label := range labelNames {
+			paramName := toLowerCamelCase(label)
+			nodejsParams = append(nodejsParams, fmt.Sprintf("%s: string", paramName))
+		}
+		metricData.NodeJSMethodParams = strings.Join(nodejsParams, ", ")
 
 		nsMap[ns][ss] = append(nsMap[ns][ss], metricData)
 	}

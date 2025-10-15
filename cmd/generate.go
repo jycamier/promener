@@ -26,13 +26,14 @@ var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate Prometheus metrics code from YAML specification",
 	Long: `Generate code for Prometheus metrics based on a YAML specification file.
-Supports multiple target languages: Go and .NET.
+Supports multiple target languages: Go, .NET, and Node.js.
 
 Examples:
   promener generate -i metrics.yaml -o metrics.go
   promener generate -i metrics.yaml -o metrics.go -l go --fx
   promener generate -i metrics.yaml -o Metrics.cs -l dotnet
-  promener generate -i metrics.yaml -o Metrics.cs -l dotnet --di`,
+  promener generate -i metrics.yaml -o Metrics.cs -l dotnet --di
+  promener generate -i metrics.yaml -o metrics.ts -l nodejs`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Parse the YAML specification
 		p := parser.New()
@@ -104,7 +105,7 @@ func init() {
 
 	generateCmd.Flags().StringVarP(&inputFile, "input", "i", "", "Input YAML specification file (required)")
 	generateCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file (required)")
-	generateCmd.Flags().StringVarP(&targetLang, "lang", "l", "go", "Target language (go, dotnet)")
+	generateCmd.Flags().StringVarP(&targetLang, "lang", "l", "go", "Target language (go, dotnet, nodejs)")
 	generateCmd.Flags().StringVarP(&packageName, "package", "p", "", "Override package/namespace name (optional)")
 	generateCmd.Flags().BoolVar(&generateFx, "fx", false, "Generate Uber FX module (Go only, optional)")
 	generateCmd.Flags().BoolVar(&generateDI, "di", false, "Generate Dependency Injection extensions (.NET only, optional)")
