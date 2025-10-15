@@ -1,0 +1,147 @@
+version: "1.0"
+info:
+  title: "E-Commerce Platform Metrics"
+  description: "Comprehensive metrics for all e-commerce microservices"
+  version: "2.0.0"
+
+services:
+  api-gateway:
+    info:
+      title: "API Gateway"
+      description: "Main API Gateway handling all incoming requests"
+      version: "1.0.0"
+      package: "ApiGateway.Metrics"
+    servers:
+      - url: "https://api.example.com/metrics"
+        description: "Production"
+      - url: "https://api-staging.example.com/metrics"
+        description: "Staging"
+      - url: "http://localhost:8080/metrics"
+        description: "Local development"
+    metrics:
+      requests_total:
+        namespace: http
+        subsystem: gateway
+        type: counter
+        help: "Total number of gateway requests"
+        labels:
+          method:
+            description: "HTTP method (GET, POST, etc.)"
+          status:
+            description: "HTTP status code"
+          route:
+            description: "Target service route"
+        examples:
+          promql:
+            - query: 'rate(http_gateway_requests_total[5m])'
+              description: "Gateway request rate per second"
+          alerts:
+            - name: "HighGatewayErrorRate"
+              expr: 'rate(http_gateway_requests_total{status=~"5.."}[5m]) > 0.05'
+              description: "Gateway 5xx error rate above 5%"
+              for: "5m"
+              severity: "critical"
+
+      request_duration_seconds:
+        namespace: http
+        subsystem: gateway
+        type: histogram
+        help: "Gateway request duration in seconds"
+        labels:
+          method:
+            description: "HTTP method"
+          route:
+            description: "Target service route"
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5]
+        examples:
+          promql:
+            - query: 'histogram_quantile(0.95, rate(http_gateway_request_duration_seconds_bucket[5m]))'
+              description: "95th percentile gateway latency"
+
+  order-service:
+    info:
+      title: "Order Service"
+      description: "Handles order creation and management"
+      version: "1.2.0"
+      package: "OrderService.Metrics"
+    servers:
+      - url: "https://orders.example.com/metrics"
+        description: "Production"
+      - url: "http://localhost:8081/metrics"
+        description: "Local"
+    metrics:
+      orders_total:
+        namespace: business
+        subsystem: orders
+        type: counter
+        help: "Total number of orders"
+        labels:
+          status:
+            description: "Order status (pending, completed, cancelled)"
+          payment_method:
+            description: "Payment method used"
+        examples:
+          promql:
+            - query: 'rate(business_orders_orders_total{status="completed"}[1h])'
+              description: "Order completion rate per hour"
+          alerts:
+            - name: "LowOrderRate"
+              expr: 'rate(business_orders_orders_total{status="completed"}[1h]) < 5'
+              description: "Order rate below expected threshold"
+              for: "30m"
+              severity: "warning"
+
+      order_amount_euros:
+        namespace: business
+        subsystem: orders
+        type: histogram
+        help: "Order amount in euros"
+        labels:
+          payment_method:
+            description: "Payment method"
+        buckets: [10, 25, 50, 100, 250, 500, 1000, 5000]
+
+  payment-service:
+    info:
+      title: "Payment Service"
+      description: "Processes payments and refunds"
+      version: "1.1.0"
+      package: "PaymentService.Metrics"
+    servers:
+      - url: "https://payments.example.com/metrics"
+        description: "Production metrics endpoint"
+      - url: "https://payments-staging.example.com/metrics"
+        description: "Staging"
+    metrics:
+      transactions_total:
+        namespace: payment
+        subsystem: processor
+        type: counter
+        help: "Total payment transactions"
+        labels:
+          provider:
+            description: "Payment provider (stripe, paypal, etc.)"
+          status:
+            description: "Transaction status (success, failed, pending)"
+          type:
+            description: "Transaction type (charge, refund)"
+        examples:
+          promql:
+            - query: 'rate(payment_processor_transactions_total{status="failed"}[5m])'
+              description: "Failed transaction rate"
+          alerts:
+            - name: "HighPaymentFailureRate"
+              expr: 'rate(payment_processor_transactions_total{status="failed"}[5m]) / rate(payment_processor_transactions_total[5m]) > 0.05'
+              description: "Payment failure rate above 5%"
+              for: "10m"
+              severity: "critical"
+
+      transaction_amount_euros:
+        namespace: payment
+        subsystem: processor
+        type: histogram
+        help: "Payment transaction amount in euros"
+        labels:
+          provider:
+            description: "Payment provider"
+        buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 5000]

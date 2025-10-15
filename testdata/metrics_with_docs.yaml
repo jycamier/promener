@@ -5,6 +5,14 @@ info:
   version: "1.0.0"
   package: "metrics"
 
+servers:
+  - url: "https://api.example.com"
+    description: "Production"
+  - url: "https://staging-api.example.com"
+    description: "Staging"
+  - url: "http://localhost:8080"
+    description: "Local"
+
 metrics:
   requests_total:
     namespace: http

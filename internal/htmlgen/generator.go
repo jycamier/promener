@@ -60,10 +60,25 @@ type AlertExampleJSON struct {
 	Severity    string `json:"severity,omitempty"`
 }
 
+// ServerJSON represents a server for JSON serialization
+type ServerJSON struct {
+	URL         string `json:"url"`
+	Description string `json:"description,omitempty"`
+}
+
+// ServiceJSON represents a service for JSON serialization
+type ServiceJSON struct {
+	Name        string       `json:"name"`
+	Info        domain.Info  `json:"info"`
+	Servers     []ServerJSON `json:"servers,omitempty"`
+	Metrics     []MetricJSON `json:"metrics"`
+}
+
 // TemplateData contains data for the HTML template
 type TemplateData struct {
-	Info        domain.Info
-	MetricsJSON template.JS
+	Info         domain.Info
+	Services     []ServiceJSON // Always used - single service = 1 element, multi = multiple
+	ServicesJSON template.JS   // JSON for JavaScript
 }
 
 // Generator handles HTML documentation generation
@@ -81,77 +96,126 @@ func New() (*Generator, error) {
 	return &Generator{tmpl: tmpl}, nil
 }
 
+// convertMetricToJSON converts a domain metric to JSON representation
+func convertMetricToJSON(key string, metric domain.Metric) MetricJSON {
+	if metric.Name == "" {
+		metric.Name = key
+	}
+
+	m := MetricJSON{
+		FullName:  metric.FullName(),
+		Name:      metric.Name,
+		Namespace: metric.Namespace,
+		Subsystem: metric.Subsystem,
+		Type:      string(metric.Type),
+		Help:      metric.Help,
+	}
+
+	// Convert labels
+	for _, label := range metric.Labels {
+		m.Labels = append(m.Labels, LabelJSON{
+			Name:        label.Name,
+			Description: label.Description,
+		})
+	}
+
+	// Convert const labels
+	for _, constLabel := range metric.ConstLabels {
+		m.ConstLabels = append(m.ConstLabels, ConstLabelJSON{
+			Name:        constLabel.Name,
+			Value:       constLabel.Value,
+			Description: constLabel.Description,
+		})
+	}
+
+	// Convert examples if present
+	if len(metric.Examples.PromQL) > 0 || len(metric.Examples.Alerts) > 0 {
+		m.Examples = &ExamplesJSON{}
+
+		for _, ex := range metric.Examples.PromQL {
+			m.Examples.PromQL = append(m.Examples.PromQL, PromQLExampleJSON{
+				Query:       ex.Query,
+				Description: ex.Description,
+			})
+		}
+
+		for _, ex := range metric.Examples.Alerts {
+			m.Examples.Alerts = append(m.Examples.Alerts, AlertExampleJSON{
+				Name:        ex.Name,
+				Expr:        ex.Expr,
+				Description: ex.Description,
+				For:         ex.For,
+				Severity:    ex.Severity,
+			})
+		}
+	}
+
+	return m
+}
+
 // Generate generates HTML documentation from a specification
 func (g *Generator) Generate(spec *domain.Specification) ([]byte, error) {
-	// Convert metrics to JSON
-	metrics := make([]MetricJSON, 0, len(spec.Metrics))
-	for key, metric := range spec.Metrics {
-		if metric.Name == "" {
-			metric.Name = key
-		}
+	var data TemplateData
+	data.Info = spec.Info
 
-		m := MetricJSON{
-			FullName:  metric.FullName(),
-			Name:      metric.Name,
-			Namespace: metric.Namespace,
-			Subsystem: metric.Subsystem,
-			Type:      string(metric.Type),
-			Help:      metric.Help,
-		}
+	var services []ServiceJSON
 
-		// Convert labels
-		for _, label := range metric.Labels {
-			m.Labels = append(m.Labels, LabelJSON{
-				Name:        label.Name,
-				Description: label.Description,
-			})
-		}
+	if spec.IsMultiService() {
+		// Multi-service mode
+		services = make([]ServiceJSON, 0, len(spec.Services))
+		for serviceName, service := range spec.Services {
+			svc := ServiceJSON{
+				Name: serviceName,
+				Info: service.Info,
+			}
 
-		// Convert const labels
-		for _, constLabel := range metric.ConstLabels {
-			m.ConstLabels = append(m.ConstLabels, ConstLabelJSON{
-				Name:        constLabel.Name,
-				Value:       constLabel.Value,
-				Description: constLabel.Description,
-			})
-		}
-
-		// Convert examples if present
-		if len(metric.Examples.PromQL) > 0 || len(metric.Examples.Alerts) > 0 {
-			m.Examples = &ExamplesJSON{}
-
-			for _, ex := range metric.Examples.PromQL {
-				m.Examples.PromQL = append(m.Examples.PromQL, PromQLExampleJSON{
-					Query:       ex.Query,
-					Description: ex.Description,
+			// Convert servers
+			for _, server := range service.Servers {
+				svc.Servers = append(svc.Servers, ServerJSON{
+					URL:         server.URL,
+					Description: server.Description,
 				})
 			}
 
-			for _, ex := range metric.Examples.Alerts {
-				m.Examples.Alerts = append(m.Examples.Alerts, AlertExampleJSON{
-					Name:        ex.Name,
-					Expr:        ex.Expr,
-					Description: ex.Description,
-					For:         ex.For,
-					Severity:    ex.Severity,
-				})
+			// Convert metrics
+			for key, metric := range service.Metrics {
+				svc.Metrics = append(svc.Metrics, convertMetricToJSON(key, metric))
 			}
+
+			services = append(services, svc)
+		}
+	} else {
+		// Single service mode - treat as a single service
+		svc := ServiceJSON{
+			Name: "default",
+			Info: spec.Info,
 		}
 
-		metrics = append(metrics, m)
+		// Convert servers
+		for _, server := range spec.Servers {
+			svc.Servers = append(svc.Servers, ServerJSON{
+				URL:         server.URL,
+				Description: server.Description,
+			})
+		}
+
+		// Convert metrics
+		for key, metric := range spec.Metrics {
+			svc.Metrics = append(svc.Metrics, convertMetricToJSON(key, metric))
+		}
+
+		services = []ServiceJSON{svc}
 	}
+
+	// Store services for template rendering
+	data.Services = services
 
 	// Marshal to JSON
-	jsonData, err := json.Marshal(metrics)
+	jsonData, err := json.Marshal(services)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal metrics to JSON: %w", err)
+		return nil, fmt.Errorf("failed to marshal services to JSON: %w", err)
 	}
-
-	// Prepare template data
-	data := TemplateData{
-		Info:        spec.Info,
-		MetricsJSON: template.JS(jsonData),
-	}
+	data.ServicesJSON = template.JS(jsonData)
 
 	// Execute template
 	var buf []byte
