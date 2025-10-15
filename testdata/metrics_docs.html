@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Application Metrics - Metrics Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900" x-data="metricsApp()">
+    
+    <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Application Metrics</h1>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Version 1.0.0</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    
+                    <input
+                        type="text"
+                        x-model="search"
+                        placeholder="Search metrics..."
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    >
+                    
+                    <button
+                        @click="toggleDarkMode()"
+                        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                        <span x-show="darkMode">🌙</span>
+                        <span x-show="!darkMode">☀️</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            
+            <nav class="lg:col-span-2">
+                <div class="sticky top-24 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 overflow-y-auto" style="max-height: calc(100vh - 7rem);">
+                    <div class="space-y-2" x-data="{ openNamespaces: {} }">
+                        <template x-for="(subsystems, namespace) in groupedMetrics" :key="namespace">
+                            <div>
+                                <button
+                                    @click="openNamespaces[namespace] = !openNamespaces[namespace]"
+                                    class="w-full flex items-center justify-between text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide py-2 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10"
+                                    :class="{ 'mb-2': openNamespaces[namespace] }"
+                                >
+                                    <span x-text="namespace"></span>
+                                    <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': openNamespaces[namespace] }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                                <div x-show="openNamespaces[namespace]" x-collapse>
+                                    <template x-for="(metrics, subsystem) in subsystems" :key="namespace + subsystem">
+                                        <div class="ml-2 mb-3" x-data="{ open: true }">
+                                            <button
+                                                @click="open = !open"
+                                                class="w-full flex items-center justify-between text-sm font-semibold text-gray-700 dark:text-gray-300 py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            >
+                                                <span x-text="subsystem"></span>
+                                                <svg class="w-3 h-3 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
+                                            <ul class="ml-2 space-y-1 mt-1" x-show="open" x-collapse>
+                                                <template x-for="metric in metrics" :key="metric.fullName">
+                                                    <li>
+                                                        <a
+                                                            :href="'#' + metric.fullName"
+                                                            class="block px-2 py-1 rounded text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 truncate"
+                                                            :title="metric.fullName"
+                                                            x-text="metric.name"
+                                                        ></a>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </nav>
+
+            
+            <main class="lg:col-span-3">
+                <template x-for="metric in filteredMetrics" :key="metric.fullName">
+                    <div
+                        :id="metric.fullName"
+                        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6"
+                    >
+                        
+                        <div class="mb-4">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="metric.fullName"></h3>
+                                    <span
+                                        class="inline-block px-2 py-1 text-xs font-semibold rounded mt-2"
+                                        :class="{
+                                            'bg-blue-100 text-blue-800': metric.type === 'counter',
+                                            'bg-green-100 text-green-800': metric.type === 'gauge',
+                                            'bg-purple-100 text-purple-800': metric.type === 'histogram',
+                                            'bg-yellow-100 text-yellow-800': metric.type === 'summary'
+                                        }"
+                                        x-text="metric.type.toUpperCase()"
+                                    ></span>
+                                </div>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mt-2" x-text="metric.help"></p>
+                        </div>
+
+                        
+                        <div class="mb-4" x-show="metric.labels.length > 0">
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Labels</h4>
+                            <div class="space-y-2">
+                                <template x-for="label in metric.labels" :key="label.name">
+                                    <div>
+                                        <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono text-gray-800 dark:text-gray-200" x-text="label.name"></code>
+                                        <p class="ml-2 mt-1 text-sm text-gray-600 dark:text-gray-400" x-show="label.description" x-text="label.description"></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        
+                        <div class="mb-4" x-show="metric.constLabels && metric.constLabels.length > 0">
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Constant Labels</h4>
+                            <div class="space-y-2">
+                                <template x-for="label in metric.constLabels" :key="label.name">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono text-gray-800 dark:text-gray-200" x-text="label.name"></code>
+                                            <span class="text-sm text-gray-500 dark:text-gray-500">=</span>
+                                            <code class="px-2 py-1 bg-blue-50 dark:bg-blue-900 rounded text-sm font-mono text-blue-800 dark:text-blue-200" x-text="label.value"></code>
+                                        </div>
+                                        <p class="ml-2 mt-1 text-sm text-gray-600 dark:text-gray-400" x-show="label.description" x-text="label.description"></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        
+                        <div x-show="metric.examples && (metric.examples.promql || metric.examples.alerts)" x-data="{ activeTab: 'promql' }">
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Examples</h4>
+
+                            
+                            <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
+                                <nav class="flex space-x-4">
+                                    <button
+                                        @click="activeTab = 'promql'"
+                                        :class="activeTab === 'promql' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="py-2 px-1 border-b-2 font-medium text-sm"
+                                        x-show="metric.examples.promql && metric.examples.promql.length > 0"
+                                    >
+                                        PromQL
+                                    </button>
+                                    <button
+                                        @click="activeTab = 'alerts'"
+                                        :class="activeTab === 'alerts' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="py-2 px-1 border-b-2 font-medium text-sm"
+                                        x-show="metric.examples.alerts && metric.examples.alerts.length > 0"
+                                    >
+                                        Alerts
+                                    </button>
+                                </nav>
+                            </div>
+
+                            
+                            <div x-show="activeTab === 'promql' && metric.examples.promql" class="space-y-4">
+                                <template x-for="example in metric.examples.promql" :key="example.query">
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2" x-show="example.description" x-text="example.description"></p>
+                                        <div class="relative">
+                                            <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code x-text="example.query"></code></pre>
+                                            <button
+                                                @click="copyToClipboard(example.query)"
+                                                class="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded"
+                                            >
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            
+                            <div x-show="activeTab === 'alerts' && metric.examples.alerts" class="space-y-4">
+                                <template x-for="example in metric.examples.alerts" :key="example.name">
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <h5 class="font-semibold text-gray-900 dark:text-white" x-text="example.name"></h5>
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded"
+                                                :class="{
+                                                    'bg-red-100 text-red-800': example.severity === 'critical',
+                                                    'bg-orange-100 text-orange-800': example.severity === 'warning',
+                                                    'bg-blue-100 text-blue-800': example.severity === 'info'
+                                                }"
+                                                x-show="example.severity"
+                                                x-text="example.severity"
+                                            ></span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2" x-show="example.description" x-text="example.description"></p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2" x-show="example.for">
+                                            For: <span x-text="example.for"></span>
+                                        </p>
+                                        <div class="relative">
+                                            <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code x-text="example.expr"></code></pre>
+                                            <button
+                                                @click="copyToClipboard(example.expr)"
+                                                class="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded"
+                                            >
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <div x-show="filteredMetrics.length === 0" class="text-center py-12">
+                    <p class="text-gray-500 dark:text-gray-400">No metrics found matching your search.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function metricsApp() {
+            
+            const savedMode = localStorage.getItem('darkMode');
+            const initialDarkMode = savedMode !== null
+                ? savedMode === 'true'
+                : window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            return {
+                search: '',
+                darkMode: initialDarkMode,
+                metrics: [{"fullName":"db_postgres_connections_active","name":"connections_active","namespace":"db","subsystem":"postgres","type":"gauge","help":"Number of active database connections","labels":[{"name":"state","description":"Connection state (idle, active, waiting)"}],"constLabels":[{"name":"database","value":"${DB_NAME:app_db}","description":"Database name"}]},{"fullName":"worker_background_job_duration_seconds","name":"job_duration_seconds","namespace":"worker","subsystem":"background","type":"summary","help":"Duration of background job processing","labels":[{"name":"job_type","description":"Type of background job"}]},{"fullName":"worker_background_queue_size","name":"queue_size","namespace":"worker","subsystem":"background","type":"gauge","help":"Number of jobs waiting in queue","labels":[{"name":"queue_name","description":"Name of the job queue"}],"examples":{"promql":[{"query":"worker_background_queue_size","description":"Current queue size"}],"alerts":[{"name":"QueueBacklog","expr":"worker_background_queue_size \u003e 1000","description":"Too many jobs in queue","for":"10m","severity":"warning"}]}},{"fullName":"business_sales_orders_total","name":"orders_total","namespace":"business","subsystem":"sales","type":"counter","help":"Total number of orders placed","labels":[{"name":"region","description":"Geographic region"},{"name":"status","description":"Order status (pending, completed, cancelled, refunded)"},{"name":"payment_method","description":"Payment method used (credit_card, paypal, bank_transfer)"}],"constLabels":[{"name":"environment","value":"${ENVIRONMENT:production}","description":"Deployment environment"}],"examples":{"promql":[{"query":"rate(business_sales_orders_total{status=\"completed\"}[1h])","description":"Order completion rate per hour"},{"query":"sum by (region) (business_sales_orders_total{status=\"completed\"})","description":"Total completed orders by region"}],"alerts":[{"name":"LowOrderRate","expr":"rate(business_sales_orders_total{status=\"completed\"}[1h]) \u003c 10","description":"Order rate is below expected threshold","for":"30m","severity":"warning"}]}},{"fullName":"business_sales_order_amount_euros","name":"order_amount_euros","namespace":"business","subsystem":"sales","type":"histogram","help":"Order amount in euros","labels":[{"name":"payment_method","description":"Payment method used"},{"name":"region","description":"Geographic region"}],"examples":{"promql":[{"query":"histogram_quantile(0.95, rate(business_sales_order_amount_euros_bucket[1h]))","description":"95th percentile order amount"},{"query":"sum(rate(business_sales_order_amount_euros_sum[1h]))","description":"Total revenue per hour"}]}},{"fullName":"business_sales_cart_abandonment_total","name":"cart_abandonment_total","namespace":"business","subsystem":"sales","type":"counter","help":"Number of abandoned shopping carts","labels":[{"name":"stage","description":"Stage where cart was abandoned (product_page, cart, checkout, payment)"},{"name":"device","description":"Device type (desktop, mobile, tablet)"}],"examples":{"alerts":[{"name":"HighCartAbandonmentRate","expr":"rate(business_sales_cart_abandonment_total[1h]) / rate(business_sales_orders_total[1h]) \u003e 0.7","description":"Cart abandonment rate is above 70%","for":"1h","severity":"warning"}]}},{"fullName":"business_users_active_users","name":"active_users","namespace":"business","subsystem":"users","type":"gauge","help":"Number of currently active users","labels":[{"name":"subscription_tier","description":"User subscription tier (free, basic, premium, enterprise)"}],"examples":{"promql":[{"query":"business_users_active_users","description":"Current number of active users"}]}},{"fullName":"business_revenue_subscription_revenue_euros","name":"subscription_revenue_euros","namespace":"business","subsystem":"revenue","type":"gauge","help":"Current monthly recurring revenue in euros","labels":[{"name":"tier","description":"Subscription tier"},{"name":"billing_cycle","description":"Billing cycle (monthly, yearly)"}],"examples":{"promql":[{"query":"sum(business_revenue_subscription_revenue_euros)","description":"Total monthly recurring revenue"}]}},{"fullName":"http_server_requests_total","name":"requests_total","namespace":"http","subsystem":"server","type":"counter","help":"Total number of HTTP requests","labels":[{"name":"method","description":"HTTP method (GET, POST, PUT, DELETE, etc.)"},{"name":"status","description":"HTTP status code (200, 404, 500, etc.)"},{"name":"endpoint","description":"API endpoint path"}],"constLabels":[{"name":"environment","value":"${ENVIRONMENT:production}","description":"Deployment environment (production, staging, etc.)"},{"name":"version","value":"1.0.0","description":"Application version"}],"examples":{"promql":[{"query":"rate(http_server_requests_total[5m])","description":"Request rate per second over the last 5 minutes"},{"query":"sum by (status) (http_server_requests_total)","description":"Total requests grouped by HTTP status code"}],"alerts":[{"name":"HighErrorRate","expr":"rate(http_server_requests_total{status=~\"5..\"}[5m]) \u003e 0.1","description":"HTTP 5xx error rate is above 10%","for":"5m","severity":"critical"}]}},{"fullName":"db_postgres_query_duration_seconds","name":"query_duration_seconds","namespace":"db","subsystem":"postgres","type":"histogram","help":"Database query duration in seconds","labels":[{"name":"query_type","description":"Type of query (SELECT, INSERT, UPDATE, DELETE)"},{"name":"table","description":"Table name"}],"constLabels":[{"name":"database","value":"${DB_NAME:app_db}","description":"Database name"}],"examples":{"promql":[{"query":"histogram_quantile(0.99, rate(db_postgres_query_duration_seconds_bucket[5m]))","description":"99th percentile query duration"}],"alerts":[{"name":"SlowDatabaseQueries","expr":"histogram_quantile(0.99, rate(db_postgres_query_duration_seconds_bucket[5m])) \u003e 0.5","description":"Database queries are too slow","for":"10m","severity":"warning"}]}},{"fullName":"worker_background_jobs_processed_total","name":"jobs_processed_total","namespace":"worker","subsystem":"background","type":"counter","help":"Total number of background jobs processed","labels":[{"name":"job_type","description":"Type of background job"},{"name":"status","description":"Job status (success, failed, retried)"}],"examples":{"alerts":[{"name":"HighJobFailureRate","expr":"rate(worker_background_jobs_processed_total{status=\"failed\"}[5m]) / rate(worker_background_jobs_processed_total[5m]) \u003e 0.05","description":"Job failure rate is above 5%","for":"15m","severity":"critical"}]}},{"fullName":"business_revenue_churn_total","name":"churn_total","namespace":"business","subsystem":"revenue","type":"counter","help":"Number of subscription cancellations","labels":[{"name":"tier","description":"Subscription tier"},{"name":"reason","description":"Cancellation reason (price, features, support, other)"}],"examples":{"promql":[{"query":"rate(business_revenue_churn_total[30d])","description":"Monthly churn rate"}],"alerts":[{"name":"HighChurnRate","expr":"rate(business_revenue_churn_total[7d]) \u003e 0.05","description":"Weekly churn rate is above 5%","for":"1d","severity":"critical"}]}},{"fullName":"crud_user_user_operations_total","name":"user_operations_total","namespace":"crud","subsystem":"user","type":"counter","help":"Total number of user CRUD operations","labels":[{"name":"operation","description":"CRUD operation (create, read, update, delete)"},{"name":"status","description":"Operation status (success, error)"},{"name":"error_type","description":"Error type if operation failed (validation, not_found, conflict, internal)"}],"constLabels":[{"name":"entity","value":"user","description":"Entity type"}],"examples":{"promql":[{"query":"rate(crud_user_operations_total{operation=\"create\",status=\"success\"}[5m])","description":"User creation rate"},{"query":"rate(crud_user_operations_total{status=\"error\"}[5m]) / rate(crud_user_operations_total[5m])","description":"User operation error rate"}],"alerts":[{"name":"HighUserOperationErrorRate","expr":"rate(crud_user_operations_total{status=\"error\"}[5m]) / rate(crud_user_operations_total[5m]) \u003e 0.1","description":"User operation error rate is above 10%","for":"5m","severity":"warning"}]}},{"fullName":"crud_product_product_operations_total","name":"product_operations_total","namespace":"crud","subsystem":"product","type":"counter","help":"Total number of product CRUD operations","labels":[{"name":"operation","description":"CRUD operation (create, read, update, delete)"},{"name":"status","description":"Operation status (success, error)"},{"name":"error_type","description":"Error type if operation failed"}],"constLabels":[{"name":"entity","value":"product","description":"Entity type"}],"examples":{"promql":[{"query":"sum by (operation) (rate(crud_product_operations_total{status=\"success\"}[5m]))","description":"Product operation rates by type"}]}},{"fullName":"crud_product_product_operation_duration_seconds","name":"product_operation_duration_seconds","namespace":"crud","subsystem":"product","type":"histogram","help":"Duration of product CRUD operations in seconds","labels":[{"name":"operation","description":"CRUD operation (create, read, update, delete)"}],"constLabels":[{"name":"entity","value":"product","description":"Entity type"}]},{"fullName":"crud_product_product_search_total","name":"product_search_total","namespace":"crud","subsystem":"product","type":"counter","help":"Number of product search operations","labels":[{"name":"result_count","description":"Result count range (empty, 1-10, 11-50, 51-100, 100+)"},{"name":"filter_used","description":"Whether filters were used (true, false)"}],"examples":{"promql":[{"query":"rate(crud_product_search_total{result_count=\"empty\"}[5m]) / rate(crud_product_search_total[5m])","description":"Product search empty result rate"}]}},{"fullName":"http_server_request_duration_seconds","name":"request_duration_seconds","namespace":"http","subsystem":"server","type":"histogram","help":"HTTP request duration in seconds","labels":[{"name":"method","description":"HTTP method"},{"name":"endpoint","description":"API endpoint"}],"examples":{"promql":[{"query":"histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket[5m]))","description":"95th percentile request duration"}],"alerts":[{"name":"SlowRequests","expr":"histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket[5m])) \u003e 1","description":"95th percentile latency is above 1 second","for":"10m","severity":"warning"}]}},{"fullName":"http_client_request_errors_total","name":"request_errors_total","namespace":"http","subsystem":"client","type":"counter","help":"Total number of HTTP client request errors","labels":[{"name":"target","description":"Target service name"},{"name":"error_type","description":"Type of error (timeout, connection_refused, etc.)"}]},{"fullName":"db_postgres_transactions_total","name":"transactions_total","namespace":"db","subsystem":"postgres","type":"counter","help":"Total number of database transactions","labels":[{"name":"status","description":"Transaction status (committed, rolled_back)"}]},{"fullName":"cache_redis_key_size_bytes","name":"key_size_bytes","namespace":"cache","subsystem":"redis","type":"histogram","help":"Size of cache keys in bytes","labels":[{"name":"key_type","description":"Type of key (user, session, config)"}]},{"fullName":"crud_user_user_operation_duration_seconds","name":"user_operation_duration_seconds","namespace":"crud","subsystem":"user","type":"histogram","help":"Duration of user CRUD operations in seconds","labels":[{"name":"operation","description":"CRUD operation (create, read, update, delete)"}],"constLabels":[{"name":"entity","value":"user","description":"Entity type"}]},{"fullName":"crud_order_order_operation_duration_seconds","name":"order_operation_duration_seconds","namespace":"crud","subsystem":"order","type":"histogram","help":"Duration of order CRUD operations in seconds","labels":[{"name":"operation","description":"CRUD operation (create, read, update, delete)"}],"constLabels":[{"name":"entity","value":"order","description":"Entity type"}]},{"fullName":"crud_order_order_items_count","name":"order_items_count","namespace":"crud","subsystem":"order","type":"histogram","help":"Number of items in orders","labels":[{"name":"operation","description":"Operation that counted items (create, read)"}],"examples":{"promql":[{"query":"histogram_quantile(0.5, rate(crud_order_order_items_count_bucket{operation=\"create\"}[1h]))","description":"Median number of items per order"}]}},{"fullName":"http_server_bytes_sent_total","name":"bytes_sent_total","namespace":"http","subsystem":"server","type":"counter","help":"Total bytes sent in HTTP responses","labels":[{"name":"method","description":"HTTP method"},{"name":"endpoint","description":"API endpoint"}],"constLabels":[{"name":"version","value":"1.0.0","description":"Application version"}]},{"fullName":"http_client_active_connections","name":"active_connections","namespace":"http","subsystem":"client","type":"gauge","help":"Number of active HTTP client connections","labels":[{"name":"target","description":"Target service name"}],"examples":{"promql":[{"query":"http_client_active_connections","description":"Current number of active connections"}],"alerts":[{"name":"TooManyConnections","expr":"http_client_active_connections \u003e 1000","description":"Too many active client connections","for":"5m","severity":"warning"}]}},{"fullName":"cache_redis_operations_total","name":"operations_total","namespace":"cache","subsystem":"redis","type":"counter","help":"Total number of cache operations","labels":[{"name":"operation","description":"Operation type (get, set, delete, exists)"},{"name":"result","description":"Operation result (hit, miss, error)"}],"constLabels":[{"name":"cluster","value":"${REDIS_CLUSTER:main}","description":"Redis cluster name"}],"examples":{"promql":[{"query":"rate(cache_redis_operations_total{result=\"hit\"}[5m]) / rate(cache_redis_operations_total[5m])","description":"Cache hit rate"}]}},{"fullName":"crud_order_order_operations_total","name":"order_operations_total","namespace":"crud","subsystem":"order","type":"counter","help":"Total number of order CRUD operations","labels":[{"name":"status","description":"Operation status (success, error)"},{"name":"error_type","description":"Error type if operation failed"},{"name":"operation","description":"CRUD operation (create, read, update, delete)"}],"constLabels":[{"name":"entity","value":"order","description":"Entity type"}],"examples":{"alerts":[{"name":"OrderCreationFailures","expr":"rate(crud_order_operations_total{operation=\"create\",status=\"error\"}[5m]) \u003e 0.05","description":"Order creation error rate is too high","for":"5m","severity":"critical"}]}}],
+
+                get filteredMetrics() {
+                    if (!this.search) return this.metrics;
+                    const query = this.search.toLowerCase();
+                    return this.metrics.filter(m =>
+                        m.fullName.toLowerCase().includes(query) ||
+                        m.help.toLowerCase().includes(query) ||
+                        m.type.toLowerCase().includes(query)
+                    );
+                },
+
+                get groupedMetrics() {
+                    const grouped = {};
+                    this.filteredMetrics.forEach(metric => {
+                        if (!grouped[metric.namespace]) {
+                            grouped[metric.namespace] = {};
+                        }
+                        if (!grouped[metric.namespace][metric.subsystem]) {
+                            grouped[metric.namespace][metric.subsystem] = [];
+                        }
+                        grouped[metric.namespace][metric.subsystem].push(metric);
+                    });
+                    return grouped;
+                },
+
+                copyToClipboard(text) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('Copied to clipboard!');
+                    });
+                },
+
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    document.documentElement.classList.toggle('dark', this.darkMode);
+                    localStorage.setItem('darkMode', this.darkMode);
+                }
+            }
+        }
+
+        
+        (function() {
+            const savedMode = localStorage.getItem('darkMode');
+            const shouldBeDark = savedMode !== null
+                ? savedMode === 'true'
+                : window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (shouldBeDark) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+</body>
+</html>
