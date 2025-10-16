@@ -1,12 +1,55 @@
 # Promener
 
-A code generator for Prometheus metrics that creates type-safe, organized code from YAML specifications.
-Supports **Go** and **.NET (C#)**.
+**Promener** (from French "promener" - to walk through/explore) addresses a critical gap in observability: **the lack of structured, maintained documentation for Prometheus metrics**.
+
+## The Problem
+
+Most teams struggle with metric observability:
+- Metrics are scattered across codebases without clear ownership or organization
+- Documentation is absent, outdated, or disconnected from the actual implementation
+- New team members can't easily understand what metrics exist or how to use them
+- PromQL queries and alerting rules are tribal knowledge, not documented
+
+## The Solution
+
+Promener takes an **opinionated, Domain-Driven Design (DDD) approach** to metrics:
+
+1. **Documentation-first**: Define metrics in a structured YAML specification where documentation is required, not optional
+2. **Single source of truth**: Your YAML spec becomes the living documentation that's always in sync with code
+3. **Domain organization**: Metrics are organized by namespace and subsystem, reflecting your business domains
+4. **Generate everything**: From one spec, generate both production code AND beautiful, searchable HTML documentation
+
+```yaml
+metrics:
+  requests_total:
+    namespace: http
+    subsystem: server
+    type: counter
+    help: "Total number of HTTP requests"  # Documentation required!
+    labels:
+      method:
+        description: "HTTP method (GET, POST, etc.)"  # Label docs required!
+    examples:
+      promql:
+        - query: 'rate(http_server_requests_total[5m])'
+          description: "Request rate per second"
+      alerts:
+        - name: "HighErrorRate"
+          expr: 'rate(http_server_requests_total{status=~"5.."}[5m]) > 0.1'
+```
+
+From this spec, Promener generates:
+- **Type-safe code** (Go, .NET C#, Node.js TypeScript) with organized facades
+- **Interactive HTML documentation** with searchable metrics, PromQL examples, and alert rules
+- **Dependency injection modules** for easy integration
+- **Thread-safe initialization** with proper registry management
+
+**Supports Go**, **.NET (C#)**, and **Node.js (TypeScript)**.
 
 ## Features
 
 - 📝 **YAML-based specifications** - Define metrics using an OpenAPI-inspired format
-- 🌐 **Multi-language support** - Generate code for **Go** and **.NET (C#)**
+- 🌐 **Multi-language support** - Generate code for **Go**, **.NET (C#)**, and **Node.js (TypeScript)**
 - 🏗️ **Organized structure** - Metrics grouped by namespace and subsystem
 - 🔒 **Type-safe facades** - Generated methods with typed parameters
 - 💉 **Dependency injection ready** - Supports Uber FX (Go) and Microsoft.Extensions.DependencyInjection (.NET)
@@ -44,13 +87,13 @@ go get github.com/jycamier/promener@latest
 Then add a `//go:generate` directive to your code:
 
 ```go
-//go:generate go run github.com/jycamier/promener generate -i metrics.yaml -o metrics/metrics_gen.go --fx
+//go:generate go run github.com/jycamier/promener generate go -i metrics.yaml -o metrics/ --di --fx
 ```
 
 Or if you prefer using the installed tool:
 
 ```go
-//go:generate promener generate -i metrics.yaml -o metrics/metrics_gen.go --fx
+//go:generate promener generate go -i metrics.yaml -o metrics/ --di --fx
 ```
 
 Then run:
@@ -103,33 +146,38 @@ metrics:
 #### For Go:
 
 ```bash
-promener generate -i metrics.yaml -o metrics/metrics.go -l go
+promener generate go -i metrics.yaml -o ./metrics
 ```
 
-With Uber FX support:
+With Uber FX dependency injection:
 
 ```bash
-promener generate -i metrics.yaml -o metrics/metrics.go -l go --fx
+promener generate go -i metrics.yaml -o ./metrics --di --fx
 ```
 
 #### For .NET (C#):
 
 ```bash
-promener generate -i metrics.yaml -o Metrics/Metrics.cs -l dotnet
+promener generate dotnet -i metrics.yaml -o ./Metrics
 ```
 
 With Dependency Injection extensions:
 
 ```bash
-promener generate -i metrics.yaml -o Metrics/Metrics.cs -l dotnet --di
+promener generate dotnet -i metrics.yaml -o ./Metrics --di
 ```
 
-**Additional options:**
+#### For Node.js (TypeScript):
 
-- Specify language: `-l go` or `-l dotnet`
+```bash
+promener generate nodejs -i metrics.yaml -o ./metrics
+```
+
+**Common options:**
+
 - Override package/namespace name: `-p mymetrics`
-- Generate FX module (Go only): `--fx`
-- Generate DI extensions (.NET only): `--di`
+- Generate DI code (Go): `--di --fx` (requires FX framework flag)
+- Generate DI extensions (.NET): `--di`
 
 ### 3. Use in your application
 
@@ -325,31 +373,82 @@ Each subsystem is provided as an interface for easy mocking in tests.
 
 ### Generate Command
 
+The `generate` command now uses language-specific subcommands:
+
 ```
-promener generate [flags]
+promener generate <language> [flags]
+
+Subcommands:
+  go        Generate Go code for Prometheus metrics
+  dotnet    Generate .NET (C#) code for Prometheus metrics
+  nodejs    Generate Node.js (TypeScript) code for Prometheus metrics
+
+Global Flags:
+  -i, --input string    Input YAML specification file (required)
+  -o, --output string   Output directory (required)
+```
+
+#### Go Subcommand
+
+```
+promener generate go [flags]
 
 Flags:
-  -i, --input string    Input YAML specification file (required)
-  -o, --output string   Output file (required)
-  -l, --lang string     Target language: go, dotnet (default: go)
-  -p, --package string  Override package/namespace name (optional)
-  --fx                  Generate Uber FX module (Go only, optional)
-  --di                  Generate Dependency Injection extensions (.NET only, optional)
+  -p, --package string  Override package name (optional)
+  --di                  Generate dependency injection code (requires --fx)
+  --fx                  Use Uber FX framework for DI
 ```
 
 Examples:
 ```bash
 # Generate Go code
-promener generate -i metrics.yaml -o metrics.go -l go
+promener generate go -i metrics.yaml -o ./metrics
 
-# Generate Go code with Uber FX
-promener generate -i metrics.yaml -o metrics.go -l go --fx
+# Generate Go code with Uber FX DI
+promener generate go -i metrics.yaml -o ./metrics --di --fx
 
+# Override package name
+promener generate go -i metrics.yaml -o ./metrics -p mymetrics
+```
+
+#### .NET Subcommand
+
+```
+promener generate dotnet [flags]
+
+Flags:
+  -p, --package string  Override namespace (optional)
+  --di                  Generate dependency injection extensions
+```
+
+Examples:
+```bash
 # Generate .NET code
-promener generate -i metrics.yaml -o Metrics.cs -l dotnet
+promener generate dotnet -i metrics.yaml -o ./Metrics
 
 # Generate .NET code with DI extensions
-promener generate -i metrics.yaml -o Metrics.cs -l dotnet --di
+promener generate dotnet -i metrics.yaml -o ./Metrics --di
+
+# Override namespace
+promener generate dotnet -i metrics.yaml -o ./Metrics -p MyApp.Metrics
+```
+
+#### Node.js Subcommand
+
+```
+promener generate nodejs [flags]
+
+Flags:
+  -p, --package string  Override package name (optional)
+```
+
+Examples:
+```bash
+# Generate Node.js code
+promener generate nodejs -i metrics.yaml -o ./metrics
+
+# Override package name
+promener generate nodejs -i metrics.yaml -o ./metrics -p my-metrics
 ```
 
 ### HTML Documentation Command
@@ -431,6 +530,12 @@ See the [testdata](testdata/) directory for complete examples.
 ## License
 
 MIT
+
+## TODO
+
+- [ ] Standardize histogram buckets by business domain (e.g., HTTP latency, DB query duration, queue processing time)
+- [ ] Standardize summary objectives by business domain (e.g., background jobs, batch processing, async tasks)
+- [ ] Add support for metric deprecation (fields: `since`, `replacedBy`, `reason`) with generated warnings and annotations
 
 ## Contributing
 
