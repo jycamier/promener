@@ -1,0 +1,65 @@
+/*
+Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+
+*/
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/jycamier/promener/internal/generator"
+	"github.com/jycamier/promener/internal/parser"
+	"github.com/spf13/cobra"
+)
+
+var (
+	nodejsPackageName string
+)
+
+// nodejsCmd represents the nodejs command
+var nodejsCmd = &cobra.Command{
+	Use:   "nodejs",
+	Short: "Generate Node.js code for Prometheus metrics",
+	Long: `Generate Node.js/TypeScript code for Prometheus metrics from a YAML specification file.
+Generates metrics.ts in the output directory.
+
+Examples:
+  promener generate nodejs -i metrics.yaml -o ./out
+  promener generate nodejs -i metrics.yaml -o ./out -p myapp`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Create output directory if it doesn't exist
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			return fmt.Errorf("failed to create output directory: %w", err)
+		}
+
+		// Parse the YAML specification
+		p := parser.New()
+		spec, err := p.ParseFile(inputFile)
+		if err != nil {
+			return fmt.Errorf("failed to parse specification: %w", err)
+		}
+
+		// Override package name if provided via flag
+		if nodejsPackageName != "" {
+			spec.Info.Package = nodejsPackageName
+		}
+
+		// Generate the Node.js code
+		metricsFile := filepath.Join(outputDir, "metrics.ts")
+		if err := generator.GenerateForLanguage(spec, generator.LanguageNodeJS, metricsFile); err != nil {
+			return fmt.Errorf("failed to generate code: %w", err)
+		}
+
+		fmt.Printf("✓ Generated Node.js metrics code: %s\n", metricsFile)
+
+		return nil
+	},
+}
+
+func init() {
+	generateCmd.AddCommand(nodejsCmd)
+
+	nodejsCmd.Flags().StringVarP(&nodejsPackageName, "package", "p", "", "Override package name (optional)")
+}

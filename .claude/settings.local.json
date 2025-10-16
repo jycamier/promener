@@ -6,7 +6,8 @@
       "Bash(./promener generate:*)",
       "Bash(cat:*)",
       "Bash(./promener:*)",
-      "Bash(open testdata/metrics_docs.html)"
+      "Bash(open testdata/metrics_docs.html)",
+      "Read(//private/tmp/promener-test/**)"
     ],
     "deny": [],
     "ask": []
