@@ -12,6 +12,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+{{- define "goDeprecated" }}
+{{- if .Deprecated }}
+// Deprecated: {{ if .Deprecated.Since }}Since {{ .Deprecated.Since }}. {{ end }}{{ if .Deprecated.ReplacedBy }}Use {{ .Deprecated.ReplacedBy }} instead. {{ end }}{{ .Deprecated.Reason }}
+{{- end }}
+{{- end }}
+
 var (
 	once sync.Once
 	registry *MetricsRegistry
@@ -118,46 +124,55 @@ func Default() *MetricsRegistry {
 {{- range $ss := $ns.Subsystems }}
 {{- range $m := $ss.Metrics }}
 {{ if eq $m.Type "counter" }}
+{{- template "goDeprecated" $m }}
 // Inc{{ $m.MethodName }} increments the {{ $m.FullName }} counter
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Inc{{ $m.MethodName }}({{ $m.MethodParams }}) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Inc()
 }
 
+{{- template "goDeprecated" $m }}
 // Add{{ $m.MethodName }} adds the given value to the {{ $m.FullName }} counter
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Add{{ $m.MethodName }}({{ $m.MethodParams }}, value float64) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Add(value)
 }
 {{ else if eq $m.Type "gauge" }}
+{{- template "goDeprecated" $m }}
 // Set{{ $m.MethodName }} sets the {{ $m.FullName }} gauge to the given value
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Set{{ $m.MethodName }}({{ $m.MethodParams }}, value float64) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Set(value)
 }
 
+{{- template "goDeprecated" $m }}
 // Inc{{ $m.MethodName }} increments the {{ $m.FullName }} gauge by 1
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Inc{{ $m.MethodName }}({{ $m.MethodParams }}) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Inc()
 }
 
+{{- template "goDeprecated" $m }}
 // Dec{{ $m.MethodName }} decrements the {{ $m.FullName }} gauge by 1
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Dec{{ $m.MethodName }}({{ $m.MethodParams }}) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Dec()
 }
 
+{{- template "goDeprecated" $m }}
 // Add{{ $m.MethodName }} adds the given value to the {{ $m.FullName }} gauge
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Add{{ $m.MethodName }}({{ $m.MethodParams }}, value float64) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Add(value)
 }
 
+{{- template "goDeprecated" $m }}
 // Sub{{ $m.MethodName }} subtracts the given value from the {{ $m.FullName }} gauge
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Sub{{ $m.MethodName }}({{ $m.MethodParams }}, value float64) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Sub(value)
 }
 {{ else if eq $m.Type "histogram" }}
+{{- template "goDeprecated" $m }}
 // Observe{{ $m.MethodName }} observes a value for the {{ $m.FullName }} histogram
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Observe{{ $m.MethodName }}({{ $m.MethodParams }}, value float64) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Observe(value)
 }
 {{ else if eq $m.Type "summary" }}
+{{- template "goDeprecated" $m }}
 // Observe{{ $m.MethodName }} observes a value for the {{ $m.FullName }} summary
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Observe{{ $m.MethodName }}({{ $m.MethodParams }}, value float64) {
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Observe(value)

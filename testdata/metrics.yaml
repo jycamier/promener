@@ -15,6 +15,10 @@ metrics:
       - method
       - status
       - endpoint
+    deprecated:
+      since: "2024-01-15"
+      replacedBy: "request_duration_seconds"
+      reason: "Switching to histogram for better latency tracking"
     ## Exemples
 
 

@@ -56,6 +56,7 @@ From this spec, Promener generates:
 - 🔄 **Thread-safe initialization** - Uses `sync.Once` for safe concurrent access
 - 📊 **All metric types** - Counter, Gauge, Histogram, and Summary
 - 🏷️ **Constant labels** - Support for static and environment variable-based labels
+- ⚠️ **Metric deprecation** - Mark metrics as deprecated with migration guidance
 - 🧪 **Mockable interfaces** - Generated interfaces for easy testing
 - 📚 **Documentation generation** - Generate beautiful HTML documentation with examples
 - 🔍 **Interactive docs** - Search, filter, dark mode, and copy-to-clipboard for queries
@@ -281,6 +282,7 @@ app.Run();
 
 - [HTTP Server Integration](docs/http-integration.md) - How to integrate metrics with HTTP servers
 - [Constant Labels](docs/constant-labels.md) - Using static and environment-based constant labels
+- [Metric Deprecation](docs/metric-deprecation.md) - How to deprecate metrics and guide migrations
 - [YAML Specification](docs/yaml-specification.md) - Complete YAML format reference
 - [Generated Code Structure](docs/generated-code.md) - Understanding the generated code
 
@@ -473,7 +475,7 @@ promener html -i metrics.yaml -o docs/metrics.html
 
 ### Enhanced Documentation with Examples
 
-For richer documentation, you can add descriptions, PromQL examples, and alert rules to your YAML:
+For richer documentation, you can add descriptions, PromQL examples, alert rules, and deprecation warnings to your YAML:
 
 ```yaml
 metrics:
@@ -493,6 +495,10 @@ metrics:
       environment:
         value: "${ENVIRONMENT:production}"
         description: "Deployment environment (production, staging, etc.)"
+    deprecated:
+      since: "2024-01-15"
+      replacedBy: "request_duration_seconds"
+      reason: "Switching to histogram for better latency tracking"
     examples:
       promql:
         - query: 'rate(http_server_requests_total[5m])'
@@ -513,15 +519,47 @@ The HTML documentation includes:
 
 - **Interactive search and filtering** - Quickly find metrics by name or namespace
 - **Dark mode support** - Automatic theme switching
+- **Deprecation warnings** - Visual warnings for deprecated metrics with migration info
 - **Label descriptions** - Detailed information about each label
 - **PromQL examples** - Ready-to-use queries with copy-to-clipboard
 - **Alert rules** - Prometheus Alertmanager rule examples
-- **Metric organization** - Grouped by namespace and subsystem
+- **Metric organization** - Grouped by namespace and subsystem with type badges
 - **Full metric details** - Type, help text, labels, buckets/objectives
 
 ### Example Documentation
 
 See [testdata/metrics_docs.html](testdata/metrics_docs.html) for a complete example generated from [testdata/metrics_with_docs.yaml](testdata/metrics_with_docs.yaml).
+
+## Metric Deprecation
+
+Promener supports marking metrics as deprecated with migration information. This helps teams manage metric lifecycle and guide users toward replacement metrics.
+
+### Deprecation Syntax
+
+```yaml
+metrics:
+  old_metric:
+    namespace: http
+    subsystem: server
+    type: counter
+    help: "Old metric - use new_metric instead"
+    deprecated:
+      since: "2024-01-15"           # When the metric was deprecated
+      replacedBy: "new_metric_name"  # The replacement metric
+      reason: "Switching to histogram for better latency tracking"
+```
+
+### Visual Indicators
+
+In the generated HTML documentation:
+
+- **Sidebar TOC**: Deprecated metrics show a ⚠️ warning icon next to their type badge
+- **Metric Details**: A prominent orange warning banner displays:
+  - When the metric was deprecated
+  - Which metric replaces it
+  - The reason for deprecation
+
+This makes it easy for teams to identify deprecated metrics and understand migration paths.
 
 ## Examples
 
@@ -535,7 +573,6 @@ MIT
 
 - [ ] Standardize histogram buckets by business domain (e.g., HTTP latency, DB query duration, queue processing time)
 - [ ] Standardize summary objectives by business domain (e.g., background jobs, batch processing, async tasks)
-- [ ] Add support for metric deprecation (fields: `since`, `replacedBy`, `reason`) with generated warnings and annotations
 
 ## Contributing
 
