@@ -51,6 +51,7 @@ type MetricData struct {
 	VecType             string
 	OptsType            string
 	Constructor         string
+	Deprecated          *domain.Deprecated
 }
 
 // toCamelCase converts a snake_case string to CamelCase
@@ -117,6 +118,7 @@ func buildTemplateData(spec *domain.Specification) *TemplateData {
 			FieldName:   toLowerCamelCase(metric.Name),
 			MethodName:  toCamelCase(metric.Name),
 			FullName:    metric.FullName(),
+			Deprecated:  metric.Deprecated,
 		}
 
 		// Set VecType, OptsType, and Constructor based on metric type

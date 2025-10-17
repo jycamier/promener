@@ -7,6 +7,13 @@ import (
 
 var metricNameRegex = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 
+// Deprecated represents deprecation information for a metric
+type Deprecated struct {
+	Since      string `yaml:"since,omitempty"`
+	ReplacedBy string `yaml:"replacedBy,omitempty"`
+	Reason     string `yaml:"reason,omitempty"`
+}
+
 // Metric represents a single Prometheus metric definition
 type Metric struct {
 	Name        string              `yaml:"name,omitempty"`
@@ -19,6 +26,7 @@ type Metric struct {
 	Objectives  map[float64]float64 `yaml:"objectives,omitempty"`
 	ConstLabels ConstLabels         `yaml:"constLabels,omitempty"`
 	Examples    Examples            `yaml:"examples,omitempty"`
+	Deprecated  *Deprecated         `yaml:"deprecated,omitempty"`
 }
 
 // GetLabelNames returns just the label names as a string slice for backward compatibility

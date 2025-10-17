@@ -13,17 +13,25 @@ import (
 //go:embed template.html
 var htmlTemplate string
 
+// DeprecatedJSON represents deprecation information for JSON serialization
+type DeprecatedJSON struct {
+	Since      string `json:"since,omitempty"`
+	ReplacedBy string `json:"replacedBy,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+}
+
 // MetricJSON represents a metric for JSON serialization
 type MetricJSON struct {
-	FullName    string          `json:"fullName"`
-	Name        string          `json:"name"`
-	Namespace   string          `json:"namespace"`
-	Subsystem   string          `json:"subsystem"`
-	Type        string          `json:"type"`
-	Help        string          `json:"help"`
-	Labels      []LabelJSON     `json:"labels"`
+	FullName    string           `json:"fullName"`
+	Name        string           `json:"name"`
+	Namespace   string           `json:"namespace"`
+	Subsystem   string           `json:"subsystem"`
+	Type        string           `json:"type"`
+	Help        string           `json:"help"`
+	Labels      []LabelJSON      `json:"labels"`
 	ConstLabels []ConstLabelJSON `json:"constLabels,omitempty"`
-	Examples    *ExamplesJSON   `json:"examples,omitempty"`
+	Examples    *ExamplesJSON    `json:"examples,omitempty"`
+	Deprecated  *DeprecatedJSON  `json:"deprecated,omitempty"`
 }
 
 // LabelJSON represents a label for JSON serialization
@@ -147,6 +155,15 @@ func convertMetricToJSON(key string, metric domain.Metric) MetricJSON {
 				For:         ex.For,
 				Severity:    ex.Severity,
 			})
+		}
+	}
+
+	// Convert deprecated if present
+	if metric.Deprecated != nil {
+		m.Deprecated = &DeprecatedJSON{
+			Since:      metric.Deprecated.Since,
+			ReplacedBy: metric.Deprecated.ReplacedBy,
+			Reason:     metric.Deprecated.Reason,
 		}
 	}
 
