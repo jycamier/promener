@@ -1,0 +1,15 @@
+name: Test Chocolatey Installation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-chocolatey-install:
+    name: Test Chocolatey Install on Windows
+    runs-on: windows-latest
+    steps:
+      - name: Install promener via Chocolatey
+        run: choco install promener -y
+
+      - name: Display promener version
+        run: promener version
