@@ -60,3 +60,20 @@ release:
     name: promener
   draft: false
   prerelease: auto
+
+brews:
+  - name: promener
+    repository:
+      owner: jycamier
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/jycamier/promener
+    description: Generates structured Prometheus metrics code with named parameters and interactive HTML documentation from YAML specifications
+    license: Apache-2.0
+    install: |
+      bin.install "promener"
+    test: |
+      system "#{bin}/promener version"
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@users.noreply.github.com
