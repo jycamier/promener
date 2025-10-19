@@ -7,8 +7,12 @@
       "Bash(cat:*)",
       "Bash(./promener:*)",
       "Bash(open testdata/metrics_docs.html)",
+<<<<<<< HEAD
       "Read(//private/tmp/promener-test/**)",
       "Read(//private/tmp/test-metrics-go/**)"
+=======
+      "WebSearch"
+>>>>>>> f6bfadc (ci: goreleaser with chocolatey)
     ],
     "deny": [],
     "ask": []
