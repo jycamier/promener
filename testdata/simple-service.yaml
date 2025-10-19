@@ -8,15 +8,13 @@ services:
   default:
     info:
       title: "My Application"
+      description: "All the metrics for my application. This is the default service for the example."
       version: "1.0.0"
-      package: "metrics"
     servers:
       - url: "https://api.example.com"
         description: "Production"
       - url: "https://staging-api.example.com"
         description: "Staging"
-      - url: "http://localhost:8080"
-        description: "Local"
     metrics:
       requests_total:
         namespace: http
@@ -73,6 +71,25 @@ services:
               severity: "warning"
 
       bytes_sent_total:
+        namespace: http
+        subsystem: server
+        type: counter
+        help: "Total bytes sent in HTTP responses"
+        labels:
+          method:
+            description: "HTTP method"
+          endpoint:
+            description: "API endpoint"
+        deprecated:
+          since: "2024-01-15"
+          replacedBy: "sent_total"
+          reason: "Switching for example in this documentation"
+        constLabels:
+          version:
+            value: "1.0.0"
+            description: "Application version"
+
+      sent_total:
         namespace: http
         subsystem: server
         type: counter
