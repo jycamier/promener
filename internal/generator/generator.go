@@ -19,13 +19,11 @@ type Generator struct {
 	outputPath  string
 }
 
-func NewGenerator(fs embed.FS, pattern string, builder TemplateDataBuilder, packageName string, outputPath string) (*Generator, error) {
+func NewGenerator(fs embed.FS, pattern string, builder TemplateDataBuilder, envTransformer EnvTransformer, packageName string, outputPath string) (*Generator, error) {
 	tmpl, err := template.
 		New("default").
 		Funcs(template.FuncMap{
-			"toGoCode": func(ev EnvVarValue) string {
-				return ev.ToGoCode()
-			},
+			"toCode": envTransformer,
 			"toLower": func(s string) string {
 				return strings.ToLower(s)
 			},

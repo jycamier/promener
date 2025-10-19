@@ -83,56 +83,6 @@ func TestParseEnvVarValue(t *testing.T) {
 	}
 }
 
-func TestEnvVarValue_ToGoCode(t *testing.T) {
-	tests := []struct {
-		name  string
-		value EnvVarValue
-		want  string
-	}{
-		{
-			name: "literal value",
-			value: EnvVarValue{
-				IsEnvVar:     false,
-				LiteralValue: "production",
-			},
-			want: `"production"`,
-		},
-		{
-			name: "env var without default",
-			value: EnvVarValue{
-				IsEnvVar: true,
-				EnvVar:   "ENVIRONMENT",
-			},
-			want: `os.Getenv("ENVIRONMENT")`,
-		},
-		{
-			name: "env var with default",
-			value: EnvVarValue{
-				IsEnvVar:     true,
-				EnvVar:       "ENVIRONMENT",
-				DefaultValue: "production",
-			},
-			want: `getEnvOrDefault("ENVIRONMENT", "production")`,
-		},
-		{
-			name: "env var with complex default",
-			value: EnvVarValue{
-				IsEnvVar:     true,
-				EnvVar:       "AWS_REGION",
-				DefaultValue: "us-east-1",
-			},
-			want: `getEnvOrDefault("AWS_REGION", "us-east-1")`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.value.ToGoCode()
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestEnvVarValue_NeedsOsImport(t *testing.T) {
 	tests := []struct {
 		name  string

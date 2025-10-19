@@ -17,7 +17,7 @@ type GolangGenerator struct {
 
 func NewGolangGenerator(packageName string, outputPath string) (*GolangGenerator, error) {
 	builder := NewGoTemplateDataBuilder()
-	generator, err := NewGenerator(templatesFS, "templates/go/*.gotmpl", builder, packageName, outputPath)
+	generator, err := NewGenerator(templatesFS, "templates/go/*.gotmpl", builder, GoEnvTransformer, packageName, outputPath)
 	if err != nil {
 		return nil, err
 	}

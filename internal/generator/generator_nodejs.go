@@ -17,7 +17,7 @@ type NodeJSGenerator struct {
 
 func NewNodeJSGenerator(packageName string, outputPath string) (*NodeJSGenerator, error) {
 	builder := NewNodeJSTemplateDataBuilder()
-	generator, err := NewGenerator(nodejsTemplatesFS, "templates/nodejs/*.gotmpl", builder, packageName, outputPath)
+	generator, err := NewGenerator(nodejsTemplatesFS, "templates/nodejs/*.gotmpl", builder, NodeJSEnvTransformer, packageName, outputPath)
 	if err != nil {
 		return nil, err
 	}

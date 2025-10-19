@@ -91,7 +91,12 @@ namespace {{ .PackageName }}
 {{- end }}
                     }
                 }{{- end }}{{- end }}
-            );
+            ){{- if $m.ConstLabels }}.WithLabels(new Dictionary<string, string>
+            {
+                {{- range $key, $val := $m.ConstLabels }}
+                { "{{ $key }}", {{ toCode $val }} },
+                {{- end }}
+            }){{- end }};
 {{- end }}
         }
 {{- range $m := $ss.Metrics }}

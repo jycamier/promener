@@ -90,7 +90,7 @@ func NewMetricsRegistry(registerer prometheus.Registerer) *MetricsRegistry {
 							{{- if $m.ConstLabels }}
 							ConstLabels: prometheus.Labels{
 								{{- range $key, $val := $m.ConstLabels }}
-								"{{ $key }}": {{ toGoCode $val }},
+								"{{ $key }}": {{ toCode $val }},
 								{{- end }}
 							},
 							{{- end }}

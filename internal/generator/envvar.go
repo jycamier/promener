@@ -36,19 +36,6 @@ func ParseEnvVarValue(value string) EnvVarValue {
 	}
 }
 
-// ToGoCode generates the Go code to get the value
-func (e EnvVarValue) ToGoCode() string {
-	if !e.IsEnvVar {
-		return `"` + e.LiteralValue + `"`
-	}
-
-	if e.DefaultValue != "" {
-		return `getEnvOrDefault("` + e.EnvVar + `", "` + e.DefaultValue + `")`
-	}
-
-	return `os.Getenv("` + e.EnvVar + `")`
-}
-
 // NeedsOsImport returns true if this value requires the os package
 func (e EnvVarValue) NeedsOsImport() bool {
 	return e.IsEnvVar

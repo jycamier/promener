@@ -17,7 +17,7 @@ type DotNetGenerator struct {
 
 func NewDotNetGenerator(packageName string, outputPath string) (*DotNetGenerator, error) {
 	builder := NewDotNetTemplateDataBuilder()
-	generator, err := NewGenerator(dotnetTemplatesFS, "templates/dotnet/*.gotmpl", builder, packageName, outputPath)
+	generator, err := NewGenerator(dotnetTemplatesFS, "templates/dotnet/*.gotmpl", builder, DotNetEnvTransformer, packageName, outputPath)
 	if err != nil {
 		return nil, err
 	}
