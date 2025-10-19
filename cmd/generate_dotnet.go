@@ -38,27 +38,28 @@ Examples:
 			return fmt.Errorf("failed to parse specification: %w", err)
 		}
 
+		// Determine package name
+		packageName := dotnetNamespace
+		if packageName == "" {
+			packageName = filepath.Base(outputDir)
+		}
+
 		// Create .NET generator
-		g, err := generator.NewDotNetGenerator()
+		g, err := generator.NewDotNetGenerator(packageName, outputDir)
 		if err != nil {
 			return fmt.Errorf("failed to create .NET generator: %w", err)
 		}
 
 		// Generate the .NET code
-		metricsFile := filepath.Join(outputDir, "Metrics.cs")
-		if err := g.GenerateFile(spec, metricsFile); err != nil {
+		if err := g.GenerateMetrics(spec); err != nil {
 			return fmt.Errorf("failed to generate code: %w", err)
 		}
 
-		fmt.Printf("✓ Generated .NET metrics code: %s\n", metricsFile)
-
 		// Generate DI extensions if requested
 		if dotnetGenerateDI {
-			diFile := filepath.Join(outputDir, "Metrics.DependencyInjection.cs")
-			if err := g.GenerateDIFile(spec, diFile); err != nil {
+			if err := g.GenerateDI(spec); err != nil {
 				return fmt.Errorf("failed to generate DI extensions: %w", err)
 			}
-			fmt.Printf("✓ Generated DI extensions: %s\n", diFile)
 		}
 
 		return nil

@@ -37,19 +37,22 @@ Examples:
 			return fmt.Errorf("failed to parse specification: %w", err)
 		}
 
+		// Determine package name
+		packageName := nodejsPackageName
+		if packageName == "" {
+			packageName = filepath.Base(outputDir)
+		}
+
 		// Create Node.js generator
-		g, err := generator.NewNodeJSGenerator()
+		g, err := generator.NewNodeJSGenerator(packageName, outputDir)
 		if err != nil {
 			return fmt.Errorf("failed to create Node.js generator: %w", err)
 		}
 
 		// Generate the Node.js code
-		metricsFile := filepath.Join(outputDir, "metrics.ts")
-		if err := g.GenerateFile(spec, metricsFile); err != nil {
+		if err := g.GenerateMetrics(spec); err != nil {
 			return fmt.Errorf("failed to generate code: %w", err)
 		}
-
-		fmt.Printf("✓ Generated Node.js metrics code: %s\n", metricsFile)
 
 		return nil
 	},

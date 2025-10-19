@@ -50,26 +50,19 @@ Examples:
 			packageName = filepath.Base(outputDir)
 		}
 
-		// Generate the Go code
-		g, err := generator.NewGoGenerator()
+		golangGenerator, err := generator.NewGolangGenerator(packageName, outputDir)
 		if err != nil {
-			return fmt.Errorf("failed to create generator: %w", err)
+			return err
 		}
-
-		metricsFile := filepath.Join(outputDir, "metrics.go")
-		if err := g.GenerateFile(spec, packageName, metricsFile); err != nil {
-			return fmt.Errorf("failed to generate code: %w", err)
+		err = golangGenerator.GenerateMetrics(spec)
+		if err != nil {
+			return err
 		}
-
-		fmt.Printf("✓ Generated Go metrics code: %s\n", metricsFile)
-
-		// Generate DI extensions if requested
 		if goGenerateDI && goGenerateFx {
-			fxFile := filepath.Join(outputDir, "metrics_fx.go")
-			if err := g.GenerateFxFile(spec, packageName, fxFile); err != nil {
-				return fmt.Errorf("failed to generate FX module: %w", err)
+			err = golangGenerator.GenerateDI(spec)
+			if err != nil {
+				return err
 			}
-			fmt.Printf("✓ Generated FX module: %s\n", fxFile)
 		}
 
 		return nil
