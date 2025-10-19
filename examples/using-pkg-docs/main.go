@@ -28,8 +28,13 @@ func main() {
 		log.Fatalf("Example 2 failed: %v", err)
 	}
 	fmt.Printf("✓ Loaded spec: %s v%s\n", spec.Info.Title, spec.Info.Version)
-	fmt.Printf("  - Metrics count: %d\n", len(spec.Metrics))
-	fmt.Printf("  - Is multi-service: %v\n", spec.IsMultiService())
+	fmt.Printf("  - Services count: %d\n", len(spec.Services))
+
+	totalMetrics := 0
+	for _, svc := range spec.Services {
+		totalMetrics += len(svc.Metrics)
+	}
+	fmt.Printf("  - Total metrics count: %d\n", totalMetrics)
 
 	html, err := docs.GenerateHTML(spec)
 	if err != nil {
@@ -45,13 +50,18 @@ info:
   title: "Example Metrics"
   description: "Generated from embedded YAML"
   version: "1.0.0"
-  package: "example"
-metrics:
-  example_counter:
-    namespace: app
-    subsystem: example
-    type: counter
-    help: "An example counter metric"
+services:
+  example:
+    info:
+      title: "Example Service"
+      version: "1.0.0"
+      package: "example"
+    metrics:
+      example_counter:
+        namespace: app
+        subsystem: example
+        type: counter
+        help: "An example counter metric"
 `)
 
 	html, err = docs.GenerateHTMLFromBytes(yamlData)

@@ -180,8 +180,8 @@ func TestMetric_Validate(t *testing.T) {
 				Subsystem: "server",
 				Type:      MetricTypeCounter,
 				Help:      "Test",
-				ConstLabels: map[string]string{
-					"123invalid": "value",
+				ConstLabels: ConstLabels{
+					{Name: "123invalid", Value: "value"},
 				},
 			},
 			wantErr: true,
@@ -195,9 +195,9 @@ func TestMetric_Validate(t *testing.T) {
 				Subsystem: "server",
 				Type:      MetricTypeCounter,
 				Help:      "Test",
-				ConstLabels: map[string]string{
-					"environment": "production",
-					"version":     "1.0.0",
+				ConstLabels: ConstLabels{
+					{Name: "environment", Value: "production"},
+					{Name: "version", Value: "1.0.0"},
 				},
 			},
 			wantErr: false,

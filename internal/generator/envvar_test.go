@@ -222,7 +222,7 @@ func TestParseConstLabels(t *testing.T) {
 		"version":     "1.0.0",
 	}
 
-	result := ParseConstLabels(constLabels)
+	result := ParseConstLabelsMap(constLabels)
 
 	assert.Len(t, result, 3)
 
@@ -272,7 +272,7 @@ func TestHasEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HasEnvVars(tt.constLabels)
+			got := HasEnvVarsMap(tt.constLabels)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -311,7 +311,7 @@ func TestNeedsHelperFunc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NeedsHelperFunc(tt.constLabels)
+			got := NeedsHelperFuncMap(tt.constLabels)
 			assert.Equal(t, tt.want, got)
 		})
 	}

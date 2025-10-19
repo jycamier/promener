@@ -14,7 +14,7 @@ using System;
 {{- end }}
 {{- end }}
 
-namespace {{ .Info.Package }}
+namespace {{ .PackageName }}
 {
 {{- range $ns := .Namespaces }}
 {{- range $ss := $ns.Subsystems }}

@@ -3,502 +3,506 @@ info:
   title: "My Application Metrics"
   description: "Prometheus metrics for my application"
   version: "1.0.0"
-  package: "metrics"
 
-servers:
-  - url: "https://api.example.com"
-    description: "Production"
-  - url: "https://staging-api.example.com"
-    description: "Staging"
-  - url: "http://localhost:8080"
-    description: "Local"
+services:
+  default:
+    info:
+      title: "My Application"
+      version: "1.0.0"
+      package: "metrics"
+    servers:
+      - url: "https://api.example.com"
+        description: "Production"
+      - url: "https://staging-api.example.com"
+        description: "Staging"
+      - url: "http://localhost:8080"
+        description: "Local"
+    metrics:
+      requests_total:
+        namespace: http
+        subsystem: server
+        type: counter
+        help: "Total number of HTTP requests"
+        labels:
+          method:
+            description: "HTTP method (GET, POST, PUT, DELETE, etc.)"
+          status:
+            description: "HTTP status code (200, 404, 500, etc.)"
+          endpoint:
+            description: "API endpoint path"
+        constLabels:
+          environment:
+            value: "${ENVIRONMENT:production}"
+            description: "Deployment environment (production, staging, etc.)"
+          version:
+            value: "1.0.0"
+            description: "Application version"
+        examples:
+          promql:
+            - query: 'rate(http_server_requests_total[5m])'
+              description: "Request rate per second over the last 5 minutes"
+            - query: 'sum by (status) (http_server_requests_total)'
+              description: "Total requests grouped by HTTP status code"
+          alerts:
+            - name: "HighErrorRate"
+              expr: 'rate(http_server_requests_total{status=~"5.."}[5m]) > 0.1'
+              description: "HTTP 5xx error rate is above 10%"
+              for: "5m"
+              severity: "critical"
 
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total number of HTTP requests"
-    labels:
-      method:
-        description: "HTTP method (GET, POST, PUT, DELETE, etc.)"
-      status:
-        description: "HTTP status code (200, 404, 500, etc.)"
-      endpoint:
-        description: "API endpoint path"
-    constLabels:
-      environment:
-        value: "${ENVIRONMENT:production}"
-        description: "Deployment environment (production, staging, etc.)"
-      version:
-        value: "1.0.0"
-        description: "Application version"
-    examples:
-      promql:
-        - query: 'rate(http_server_requests_total[5m])'
-          description: "Request rate per second over the last 5 minutes"
-        - query: 'sum by (status) (http_server_requests_total)'
-          description: "Total requests grouped by HTTP status code"
-      alerts:
-        - name: "HighErrorRate"
-          expr: 'rate(http_server_requests_total{status=~"5.."}[5m]) > 0.1'
-          description: "HTTP 5xx error rate is above 10%"
-          for: "5m"
-          severity: "critical"
+      request_duration_seconds:
+        namespace: http
+        subsystem: server
+        type: histogram
+        help: "HTTP request duration in seconds"
+        labels:
+          method:
+            description: "HTTP method"
+          endpoint:
+            description: "API endpoint"
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+        examples:
+          promql:
+            - query: 'histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket[5m]))'
+              description: "95th percentile request duration"
+          alerts:
+            - name: "SlowRequests"
+              expr: 'histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket[5m])) > 1'
+              description: "95th percentile latency is above 1 second"
+              for: "10m"
+              severity: "warning"
 
-  request_duration_seconds:
-    namespace: http
-    subsystem: server
-    type: histogram
-    help: "HTTP request duration in seconds"
-    labels:
-      method:
-        description: "HTTP method"
-      endpoint:
-        description: "API endpoint"
-    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
-    examples:
-      promql:
-        - query: 'histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket[5m]))'
-          description: "95th percentile request duration"
-      alerts:
-        - name: "SlowRequests"
-          expr: 'histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket[5m])) > 1'
-          description: "95th percentile latency is above 1 second"
-          for: "10m"
-          severity: "warning"
+      bytes_sent_total:
+        namespace: http
+        subsystem: server
+        type: counter
+        help: "Total bytes sent in HTTP responses"
+        labels:
+          method:
+            description: "HTTP method"
+          endpoint:
+            description: "API endpoint"
+        constLabels:
+          version:
+            value: "1.0.0"
+            description: "Application version"
 
-  bytes_sent_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total bytes sent in HTTP responses"
-    labels:
-      method:
-        description: "HTTP method"
-      endpoint:
-        description: "API endpoint"
-    constLabels:
-      version:
-        value: "1.0.0"
-        description: "Application version"
+      active_connections:
+        namespace: http
+        subsystem: client
+        type: gauge
+        help: "Number of active HTTP client connections"
+        labels:
+          target:
+            description: "Target service name"
+        examples:
+          promql:
+            - query: 'http_client_active_connections'
+              description: "Current number of active connections"
+          alerts:
+            - name: "TooManyConnections"
+              expr: 'http_client_active_connections > 1000'
+              description: "Too many active client connections"
+              for: "5m"
+              severity: "warning"
 
-  active_connections:
-    namespace: http
-    subsystem: client
-    type: gauge
-    help: "Number of active HTTP client connections"
-    labels:
-      target:
-        description: "Target service name"
-    examples:
-      promql:
-        - query: 'http_client_active_connections'
-          description: "Current number of active connections"
-      alerts:
-        - name: "TooManyConnections"
-          expr: 'http_client_active_connections > 1000'
-          description: "Too many active client connections"
-          for: "5m"
-          severity: "warning"
+      request_errors_total:
+        namespace: http
+        subsystem: client
+        type: counter
+        help: "Total number of HTTP client request errors"
+        labels:
+          target:
+            description: "Target service name"
+          error_type:
+            description: "Type of error (timeout, connection_refused, etc.)"
 
-  request_errors_total:
-    namespace: http
-    subsystem: client
-    type: counter
-    help: "Total number of HTTP client request errors"
-    labels:
-      target:
-        description: "Target service name"
-      error_type:
-        description: "Type of error (timeout, connection_refused, etc.)"
+      query_duration_seconds:
+        namespace: db
+        subsystem: postgres
+        type: histogram
+        help: "Database query duration in seconds"
+        labels:
+          query_type:
+            description: "Type of query (SELECT, INSERT, UPDATE, DELETE)"
+          table:
+            description: "Table name"
+        buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5]
+        constLabels:
+          database:
+            value: "${DB_NAME:app_db}"
+            description: "Database name"
+        examples:
+          promql:
+            - query: 'histogram_quantile(0.99, rate(db_postgres_query_duration_seconds_bucket[5m]))'
+              description: "99th percentile query duration"
+          alerts:
+            - name: "SlowDatabaseQueries"
+              expr: 'histogram_quantile(0.99, rate(db_postgres_query_duration_seconds_bucket[5m])) > 0.5'
+              description: "Database queries are too slow"
+              for: "10m"
+              severity: "warning"
 
-  query_duration_seconds:
-    namespace: db
-    subsystem: postgres
-    type: histogram
-    help: "Database query duration in seconds"
-    labels:
-      query_type:
-        description: "Type of query (SELECT, INSERT, UPDATE, DELETE)"
-      table:
-        description: "Table name"
-    buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5]
-    constLabels:
-      database:
-        value: "${DB_NAME:app_db}"
-        description: "Database name"
-    examples:
-      promql:
-        - query: 'histogram_quantile(0.99, rate(db_postgres_query_duration_seconds_bucket[5m]))'
-          description: "99th percentile query duration"
-      alerts:
-        - name: "SlowDatabaseQueries"
-          expr: 'histogram_quantile(0.99, rate(db_postgres_query_duration_seconds_bucket[5m])) > 0.5'
-          description: "Database queries are too slow"
-          for: "10m"
-          severity: "warning"
+      connections_active:
+        namespace: db
+        subsystem: postgres
+        type: gauge
+        help: "Number of active database connections"
+        labels:
+          state:
+            description: "Connection state (idle, active, waiting)"
+        constLabels:
+          database:
+            value: "${DB_NAME:app_db}"
+            description: "Database name"
 
-  connections_active:
-    namespace: db
-    subsystem: postgres
-    type: gauge
-    help: "Number of active database connections"
-    labels:
-      state:
-        description: "Connection state (idle, active, waiting)"
-    constLabels:
-      database:
-        value: "${DB_NAME:app_db}"
-        description: "Database name"
+      transactions_total:
+        namespace: db
+        subsystem: postgres
+        type: counter
+        help: "Total number of database transactions"
+        labels:
+          status:
+            description: "Transaction status (committed, rolled_back)"
 
-  transactions_total:
-    namespace: db
-    subsystem: postgres
-    type: counter
-    help: "Total number of database transactions"
-    labels:
-      status:
-        description: "Transaction status (committed, rolled_back)"
+      operations_total:
+        namespace: cache
+        subsystem: redis
+        type: counter
+        help: "Total number of cache operations"
+        labels:
+          operation:
+            description: "Operation type (get, set, delete, exists)"
+          result:
+            description: "Operation result (hit, miss, error)"
+        constLabels:
+          cluster:
+            value: "${REDIS_CLUSTER:main}"
+            description: "Redis cluster name"
+        examples:
+          promql:
+            - query: 'rate(cache_redis_operations_total{result="hit"}[5m]) / rate(cache_redis_operations_total[5m])'
+              description: "Cache hit rate"
 
-  operations_total:
-    namespace: cache
-    subsystem: redis
-    type: counter
-    help: "Total number of cache operations"
-    labels:
-      operation:
-        description: "Operation type (get, set, delete, exists)"
-      result:
-        description: "Operation result (hit, miss, error)"
-    constLabels:
-      cluster:
-        value: "${REDIS_CLUSTER:main}"
-        description: "Redis cluster name"
-    examples:
-      promql:
-        - query: 'rate(cache_redis_operations_total{result="hit"}[5m]) / rate(cache_redis_operations_total[5m])'
-          description: "Cache hit rate"
+      key_size_bytes:
+        namespace: cache
+        subsystem: redis
+        type: histogram
+        help: "Size of cache keys in bytes"
+        labels:
+          key_type:
+            description: "Type of key (user, session, config)"
+        buckets: [100, 500, 1000, 5000, 10000, 50000, 100000]
 
-  key_size_bytes:
-    namespace: cache
-    subsystem: redis
-    type: histogram
-    help: "Size of cache keys in bytes"
-    labels:
-      key_type:
-        description: "Type of key (user, session, config)"
-    buckets: [100, 500, 1000, 5000, 10000, 50000, 100000]
+      jobs_processed_total:
+        namespace: worker
+        subsystem: background
+        type: counter
+        help: "Total number of background jobs processed"
+        labels:
+          job_type:
+            description: "Type of background job"
+          status:
+            description: "Job status (success, failed, retried)"
+        examples:
+          alerts:
+            - name: "HighJobFailureRate"
+              expr: 'rate(worker_background_jobs_processed_total{status="failed"}[5m]) / rate(worker_background_jobs_processed_total[5m]) > 0.05'
+              description: "Job failure rate is above 5%"
+              for: "15m"
+              severity: "critical"
 
-  jobs_processed_total:
-    namespace: worker
-    subsystem: background
-    type: counter
-    help: "Total number of background jobs processed"
-    labels:
-      job_type:
-        description: "Type of background job"
-      status:
-        description: "Job status (success, failed, retried)"
-    examples:
-      alerts:
-        - name: "HighJobFailureRate"
-          expr: 'rate(worker_background_jobs_processed_total{status="failed"}[5m]) / rate(worker_background_jobs_processed_total[5m]) > 0.05'
-          description: "Job failure rate is above 5%"
-          for: "15m"
-          severity: "critical"
+      job_duration_seconds:
+        namespace: worker
+        subsystem: background
+        type: summary
+        help: "Duration of background job processing"
+        labels:
+          job_type:
+            description: "Type of background job"
+        objectives:
+          0.5: 0.05
+          0.9: 0.01
+          0.99: 0.001
 
-  job_duration_seconds:
-    namespace: worker
-    subsystem: background
-    type: summary
-    help: "Duration of background job processing"
-    labels:
-      job_type:
-        description: "Type of background job"
-    objectives:
-      0.5: 0.05
-      0.9: 0.01
-      0.99: 0.001
+      queue_size:
+        namespace: worker
+        subsystem: background
+        type: gauge
+        help: "Number of jobs waiting in queue"
+        labels:
+          queue_name:
+            description: "Name of the job queue"
+        examples:
+          promql:
+            - query: 'worker_background_queue_size'
+              description: "Current queue size"
+          alerts:
+            - name: "QueueBacklog"
+              expr: 'worker_background_queue_size > 1000'
+              description: "Too many jobs in queue"
+              for: "10m"
+              severity: "warning"
 
-  queue_size:
-    namespace: worker
-    subsystem: background
-    type: gauge
-    help: "Number of jobs waiting in queue"
-    labels:
-      queue_name:
-        description: "Name of the job queue"
-    examples:
-      promql:
-        - query: 'worker_background_queue_size'
-          description: "Current queue size"
-      alerts:
-        - name: "QueueBacklog"
-          expr: 'worker_background_queue_size > 1000'
-          description: "Too many jobs in queue"
-          for: "10m"
-          severity: "warning"
+      # Business metrics
+      orders_total:
+        namespace: business
+        subsystem: sales
+        type: counter
+        help: "Total number of orders placed"
+        labels:
+          status:
+            description: "Order status (pending, completed, cancelled, refunded)"
+          payment_method:
+            description: "Payment method used (credit_card, paypal, bank_transfer)"
+          region:
+            description: "Geographic region"
+        constLabels:
+          environment:
+            value: "${ENVIRONMENT:production}"
+            description: "Deployment environment"
+        examples:
+          promql:
+            - query: 'rate(business_sales_orders_total{status="completed"}[1h])'
+              description: "Order completion rate per hour"
+            - query: 'sum by (region) (business_sales_orders_total{status="completed"})'
+              description: "Total completed orders by region"
+          alerts:
+            - name: "LowOrderRate"
+              expr: 'rate(business_sales_orders_total{status="completed"}[1h]) < 10'
+              description: "Order rate is below expected threshold"
+              for: "30m"
+              severity: "warning"
 
-  # Business metrics
-  orders_total:
-    namespace: business
-    subsystem: sales
-    type: counter
-    help: "Total number of orders placed"
-    labels:
-      status:
-        description: "Order status (pending, completed, cancelled, refunded)"
-      payment_method:
-        description: "Payment method used (credit_card, paypal, bank_transfer)"
-      region:
-        description: "Geographic region"
-    constLabels:
-      environment:
-        value: "${ENVIRONMENT:production}"
-        description: "Deployment environment"
-    examples:
-      promql:
-        - query: 'rate(business_sales_orders_total{status="completed"}[1h])'
-          description: "Order completion rate per hour"
-        - query: 'sum by (region) (business_sales_orders_total{status="completed"})'
-          description: "Total completed orders by region"
-      alerts:
-        - name: "LowOrderRate"
-          expr: 'rate(business_sales_orders_total{status="completed"}[1h]) < 10'
-          description: "Order rate is below expected threshold"
-          for: "30m"
-          severity: "warning"
+      order_amount_euros:
+        namespace: business
+        subsystem: sales
+        type: histogram
+        help: "Order amount in euros"
+        labels:
+          payment_method:
+            description: "Payment method used"
+          region:
+            description: "Geographic region"
+        buckets: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
+        examples:
+          promql:
+            - query: 'histogram_quantile(0.95, rate(business_sales_order_amount_euros_bucket[1h]))'
+              description: "95th percentile order amount"
+            - query: 'sum(rate(business_sales_order_amount_euros_sum[1h]))'
+              description: "Total revenue per hour"
 
-  order_amount_euros:
-    namespace: business
-    subsystem: sales
-    type: histogram
-    help: "Order amount in euros"
-    labels:
-      payment_method:
-        description: "Payment method used"
-      region:
-        description: "Geographic region"
-    buckets: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
-    examples:
-      promql:
-        - query: 'histogram_quantile(0.95, rate(business_sales_order_amount_euros_bucket[1h]))'
-          description: "95th percentile order amount"
-        - query: 'sum(rate(business_sales_order_amount_euros_sum[1h]))'
-          description: "Total revenue per hour"
+      cart_abandonment_total:
+        namespace: business
+        subsystem: sales
+        type: counter
+        help: "Number of abandoned shopping carts"
+        labels:
+          stage:
+            description: "Stage where cart was abandoned (product_page, cart, checkout, payment)"
+          device:
+            description: "Device type (desktop, mobile, tablet)"
+        examples:
+          alerts:
+            - name: "HighCartAbandonmentRate"
+              expr: 'rate(business_sales_cart_abandonment_total[1h]) / rate(business_sales_orders_total[1h]) > 0.7'
+              description: "Cart abandonment rate is above 70%"
+              for: "1h"
+              severity: "warning"
 
-  cart_abandonment_total:
-    namespace: business
-    subsystem: sales
-    type: counter
-    help: "Number of abandoned shopping carts"
-    labels:
-      stage:
-        description: "Stage where cart was abandoned (product_page, cart, checkout, payment)"
-      device:
-        description: "Device type (desktop, mobile, tablet)"
-    examples:
-      alerts:
-        - name: "HighCartAbandonmentRate"
-          expr: 'rate(business_sales_cart_abandonment_total[1h]) / rate(business_sales_orders_total[1h]) > 0.7'
-          description: "Cart abandonment rate is above 70%"
-          for: "1h"
-          severity: "warning"
+      active_users:
+        namespace: business
+        subsystem: users
+        type: gauge
+        help: "Number of currently active users"
+        labels:
+          subscription_tier:
+            description: "User subscription tier (free, basic, premium, enterprise)"
+        examples:
+          promql:
+            - query: 'business_users_active_users'
+              description: "Current number of active users"
 
-  active_users:
-    namespace: business
-    subsystem: users
-    type: gauge
-    help: "Number of currently active users"
-    labels:
-      subscription_tier:
-        description: "User subscription tier (free, basic, premium, enterprise)"
-    examples:
-      promql:
-        - query: 'business_users_active_users'
-          description: "Current number of active users"
+      subscription_revenue_euros:
+        namespace: business
+        subsystem: revenue
+        type: gauge
+        help: "Current monthly recurring revenue in euros"
+        labels:
+          tier:
+            description: "Subscription tier"
+          billing_cycle:
+            description: "Billing cycle (monthly, yearly)"
+        examples:
+          promql:
+            - query: 'sum(business_revenue_subscription_revenue_euros)'
+              description: "Total monthly recurring revenue"
 
-  subscription_revenue_euros:
-    namespace: business
-    subsystem: revenue
-    type: gauge
-    help: "Current monthly recurring revenue in euros"
-    labels:
-      tier:
-        description: "Subscription tier"
-      billing_cycle:
-        description: "Billing cycle (monthly, yearly)"
-    examples:
-      promql:
-        - query: 'sum(business_revenue_subscription_revenue_euros)'
-          description: "Total monthly recurring revenue"
+      churn_total:
+        namespace: business
+        subsystem: revenue
+        type: counter
+        help: "Number of subscription cancellations"
+        labels:
+          tier:
+            description: "Subscription tier"
+          reason:
+            description: "Cancellation reason (price, features, support, other)"
+        examples:
+          promql:
+            - query: 'rate(business_revenue_churn_total[30d])'
+              description: "Monthly churn rate"
+          alerts:
+            - name: "HighChurnRate"
+              expr: 'rate(business_revenue_churn_total[7d]) > 0.05'
+              description: "Weekly churn rate is above 5%"
+              for: "1d"
+              severity: "critical"
 
-  churn_total:
-    namespace: business
-    subsystem: revenue
-    type: counter
-    help: "Number of subscription cancellations"
-    labels:
-      tier:
-        description: "Subscription tier"
-      reason:
-        description: "Cancellation reason (price, features, support, other)"
-    examples:
-      promql:
-        - query: 'rate(business_revenue_churn_total[30d])'
-          description: "Monthly churn rate"
-      alerts:
-        - name: "HighChurnRate"
-          expr: 'rate(business_revenue_churn_total[7d]) > 0.05'
-          description: "Weekly churn rate is above 5%"
-          for: "1d"
-          severity: "critical"
+      # CRUD metrics - User entity
+      user_operations_total:
+        namespace: crud
+        subsystem: user
+        type: counter
+        help: "Total number of user CRUD operations"
+        labels:
+          operation:
+            description: "CRUD operation (create, read, update, delete)"
+          status:
+            description: "Operation status (success, error)"
+          error_type:
+            description: "Error type if operation failed (validation, not_found, conflict, internal)"
+        constLabels:
+          entity:
+            value: "user"
+            description: "Entity type"
+        examples:
+          promql:
+            - query: 'rate(crud_user_operations_total{operation="create",status="success"}[5m])'
+              description: "User creation rate"
+            - query: 'rate(crud_user_operations_total{status="error"}[5m]) / rate(crud_user_operations_total[5m])'
+              description: "User operation error rate"
+          alerts:
+            - name: "HighUserOperationErrorRate"
+              expr: 'rate(crud_user_operations_total{status="error"}[5m]) / rate(crud_user_operations_total[5m]) > 0.1'
+              description: "User operation error rate is above 10%"
+              for: "5m"
+              severity: "warning"
 
-  # CRUD metrics - User entity
-  user_operations_total:
-    namespace: crud
-    subsystem: user
-    type: counter
-    help: "Total number of user CRUD operations"
-    labels:
-      operation:
-        description: "CRUD operation (create, read, update, delete)"
-      status:
-        description: "Operation status (success, error)"
-      error_type:
-        description: "Error type if operation failed (validation, not_found, conflict, internal)"
-    constLabels:
-      entity:
-        value: "user"
-        description: "Entity type"
-    examples:
-      promql:
-        - query: 'rate(crud_user_operations_total{operation="create",status="success"}[5m])'
-          description: "User creation rate"
-        - query: 'rate(crud_user_operations_total{status="error"}[5m]) / rate(crud_user_operations_total[5m])'
-          description: "User operation error rate"
-      alerts:
-        - name: "HighUserOperationErrorRate"
-          expr: 'rate(crud_user_operations_total{status="error"}[5m]) / rate(crud_user_operations_total[5m]) > 0.1'
-          description: "User operation error rate is above 10%"
-          for: "5m"
-          severity: "warning"
+      user_operation_duration_seconds:
+        namespace: crud
+        subsystem: user
+        type: histogram
+        help: "Duration of user CRUD operations in seconds"
+        labels:
+          operation:
+            description: "CRUD operation (create, read, update, delete)"
+        buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]
+        constLabels:
+          entity:
+            value: "user"
+            description: "Entity type"
 
-  user_operation_duration_seconds:
-    namespace: crud
-    subsystem: user
-    type: histogram
-    help: "Duration of user CRUD operations in seconds"
-    labels:
-      operation:
-        description: "CRUD operation (create, read, update, delete)"
-    buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]
-    constLabels:
-      entity:
-        value: "user"
-        description: "Entity type"
+      # CRUD metrics - Product entity
+      product_operations_total:
+        namespace: crud
+        subsystem: product
+        type: counter
+        help: "Total number of product CRUD operations"
+        labels:
+          operation:
+            description: "CRUD operation (create, read, update, delete)"
+          status:
+            description: "Operation status (success, error)"
+          error_type:
+            description: "Error type if operation failed"
+        constLabels:
+          entity:
+            value: "product"
+            description: "Entity type"
+        examples:
+          promql:
+            - query: 'sum by (operation) (rate(crud_product_operations_total{status="success"}[5m]))'
+              description: "Product operation rates by type"
 
-  # CRUD metrics - Product entity
-  product_operations_total:
-    namespace: crud
-    subsystem: product
-    type: counter
-    help: "Total number of product CRUD operations"
-    labels:
-      operation:
-        description: "CRUD operation (create, read, update, delete)"
-      status:
-        description: "Operation status (success, error)"
-      error_type:
-        description: "Error type if operation failed"
-    constLabels:
-      entity:
-        value: "product"
-        description: "Entity type"
-    examples:
-      promql:
-        - query: 'sum by (operation) (rate(crud_product_operations_total{status="success"}[5m]))'
-          description: "Product operation rates by type"
+      product_operation_duration_seconds:
+        namespace: crud
+        subsystem: product
+        type: histogram
+        help: "Duration of product CRUD operations in seconds"
+        labels:
+          operation:
+            description: "CRUD operation (create, read, update, delete)"
+        buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]
+        constLabels:
+          entity:
+            value: "product"
+            description: "Entity type"
 
-  product_operation_duration_seconds:
-    namespace: crud
-    subsystem: product
-    type: histogram
-    help: "Duration of product CRUD operations in seconds"
-    labels:
-      operation:
-        description: "CRUD operation (create, read, update, delete)"
-    buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]
-    constLabels:
-      entity:
-        value: "product"
-        description: "Entity type"
+      product_search_total:
+        namespace: crud
+        subsystem: product
+        type: counter
+        help: "Number of product search operations"
+        labels:
+          result_count:
+            description: "Result count range (empty, 1-10, 11-50, 51-100, 100+)"
+          filter_used:
+            description: "Whether filters were used (true, false)"
+        examples:
+          promql:
+            - query: 'rate(crud_product_search_total{result_count="empty"}[5m]) / rate(crud_product_search_total[5m])'
+              description: "Product search empty result rate"
 
-  product_search_total:
-    namespace: crud
-    subsystem: product
-    type: counter
-    help: "Number of product search operations"
-    labels:
-      result_count:
-        description: "Result count range (empty, 1-10, 11-50, 51-100, 100+)"
-      filter_used:
-        description: "Whether filters were used (true, false)"
-    examples:
-      promql:
-        - query: 'rate(crud_product_search_total{result_count="empty"}[5m]) / rate(crud_product_search_total[5m])'
-          description: "Product search empty result rate"
+      # CRUD metrics - Order entity
+      order_operations_total:
+        namespace: crud
+        subsystem: order
+        type: counter
+        help: "Total number of order CRUD operations"
+        labels:
+          operation:
+            description: "CRUD operation (create, read, update, delete)"
+          status:
+            description: "Operation status (success, error)"
+          error_type:
+            description: "Error type if operation failed"
+        constLabels:
+          entity:
+            value: "order"
+            description: "Entity type"
+        examples:
+          alerts:
+            - name: "OrderCreationFailures"
+              expr: 'rate(crud_order_operations_total{operation="create",status="error"}[5m]) > 0.05'
+              description: "Order creation error rate is too high"
+              for: "5m"
+              severity: "critical"
 
-  # CRUD metrics - Order entity
-  order_operations_total:
-    namespace: crud
-    subsystem: order
-    type: counter
-    help: "Total number of order CRUD operations"
-    labels:
-      operation:
-        description: "CRUD operation (create, read, update, delete)"
-      status:
-        description: "Operation status (success, error)"
-      error_type:
-        description: "Error type if operation failed"
-    constLabels:
-      entity:
-        value: "order"
-        description: "Entity type"
-    examples:
-      alerts:
-        - name: "OrderCreationFailures"
-          expr: 'rate(crud_order_operations_total{operation="create",status="error"}[5m]) > 0.05'
-          description: "Order creation error rate is too high"
-          for: "5m"
-          severity: "critical"
+      order_operation_duration_seconds:
+        namespace: crud
+        subsystem: order
+        type: histogram
+        help: "Duration of order CRUD operations in seconds"
+        labels:
+          operation:
+            description: "CRUD operation (create, read, update, delete)"
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5]
+        constLabels:
+          entity:
+            value: "order"
+            description: "Entity type"
 
-  order_operation_duration_seconds:
-    namespace: crud
-    subsystem: order
-    type: histogram
-    help: "Duration of order CRUD operations in seconds"
-    labels:
-      operation:
-        description: "CRUD operation (create, read, update, delete)"
-    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5]
-    constLabels:
-      entity:
-        value: "order"
-        description: "Entity type"
-
-  order_items_count:
-    namespace: crud
-    subsystem: order
-    type: histogram
-    help: "Number of items in orders"
-    labels:
-      operation:
-        description: "Operation that counted items (create, read)"
-    buckets: [1, 2, 3, 5, 10, 20, 50]
-    examples:
-      promql:
-        - query: 'histogram_quantile(0.5, rate(crud_order_order_items_count_bucket{operation="create"}[1h]))'
-          description: "Median number of items per order"
+      order_items_count:
+        namespace: crud
+        subsystem: order
+        type: histogram
+        help: "Number of items in orders"
+        labels:
+          operation:
+            description: "Operation that counted items (create, read)"
+        buckets: [1, 2, 3, 5, 10, 20, 50]
+        examples:
+          promql:
+            - query: 'histogram_quantile(0.5, rate(crud_order_order_items_count_bucket{operation="create"}[1h]))'
+              description: "Median number of items per order"

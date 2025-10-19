@@ -33,11 +33,6 @@ func NewDotNetGenerator() (*DotNetGenerator, error) {
 	}, nil
 }
 
-// Language returns the language this generator targets
-func (g *DotNetGenerator) Language() Language {
-	return LanguageDotNet
-}
-
 // Generate generates C# code from a specification
 func (g *DotNetGenerator) Generate(spec *domain.Specification) ([]byte, error) {
 	var buf bytes.Buffer
@@ -88,7 +83,7 @@ func (g *DotNetGenerator) GenerateDIFile(spec *domain.Specification, outputPath 
 
 // buildDotNetTemplateData builds template data with .NET-specific VecTypes
 func buildDotNetTemplateData(spec *domain.Specification) *TemplateData {
-	data := buildTemplateData(spec)
+	data := buildTemplateData(spec, "")
 
 	// Update VecType for .NET (prometheus-net uses different names)
 	for i := range data.Namespaces {
@@ -110,11 +105,4 @@ func buildDotNetTemplateData(spec *domain.Specification) *TemplateData {
 	}
 
 	return data
-}
-
-func init() {
-	// Register .NET generator
-	RegisterGenerator(LanguageDotNet, func() (CodeGenerator, error) {
-		return NewDotNetGenerator()
-	})
 }

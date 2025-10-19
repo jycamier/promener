@@ -85,8 +85,8 @@ type ServiceJSON struct {
 // TemplateData contains data for the HTML template
 type TemplateData struct {
 	Info         domain.Info
-	Services     []ServiceJSON // Always used - single service = 1 element, multi = multiple
-	ServicesJSON template.JS   // JSON for JavaScript
+	Services     []ServiceJSON
+	ServicesJSON template.JS
 }
 
 // Generator handles HTML documentation generation
@@ -175,41 +175,15 @@ func (g *Generator) Generate(spec *domain.Specification) ([]byte, error) {
 	var data TemplateData
 	data.Info = spec.Info
 
-	var services []ServiceJSON
-
-	if spec.IsMultiService() {
-		// Multi-service mode
-		services = make([]ServiceJSON, 0, len(spec.Services))
-		for serviceName, service := range spec.Services {
-			svc := ServiceJSON{
-				Name: serviceName,
-				Info: service.Info,
-			}
-
-			// Convert servers
-			for _, server := range service.Servers {
-				svc.Servers = append(svc.Servers, ServerJSON{
-					URL:         server.URL,
-					Description: server.Description,
-				})
-			}
-
-			// Convert metrics
-			for key, metric := range service.Metrics {
-				svc.Metrics = append(svc.Metrics, convertMetricToJSON(key, metric))
-			}
-
-			services = append(services, svc)
-		}
-	} else {
-		// Single service mode - treat as a single service
+	services := make([]ServiceJSON, 0, len(spec.Services))
+	for serviceName, service := range spec.Services {
 		svc := ServiceJSON{
-			Name: "default",
-			Info: spec.Info,
+			Name: serviceName,
+			Info: service.Info,
 		}
 
 		// Convert servers
-		for _, server := range spec.Servers {
+		for _, server := range service.Servers {
 			svc.Servers = append(svc.Servers, ServerJSON{
 				URL:         server.URL,
 				Description: server.Description,
@@ -217,24 +191,21 @@ func (g *Generator) Generate(spec *domain.Specification) ([]byte, error) {
 		}
 
 		// Convert metrics
-		for key, metric := range spec.Metrics {
+		for key, metric := range service.Metrics {
 			svc.Metrics = append(svc.Metrics, convertMetricToJSON(key, metric))
 		}
 
-		services = []ServiceJSON{svc}
+		services = append(services, svc)
 	}
 
-	// Store services for template rendering
 	data.Services = services
 
-	// Marshal to JSON
 	jsonData, err := json.Marshal(services)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal services to JSON: %w", err)
 	}
 	data.ServicesJSON = template.JS(jsonData)
 
-	// Execute template
 	var buf []byte
 	w := &bytesWriter{buf: &buf}
 	if err := g.tmpl.Execute(w, data); err != nil {

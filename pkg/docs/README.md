@@ -159,28 +159,33 @@ go run main.go
 
 ## Format de spécification
 
-Le package supporte deux modes :
+Les spécifications sont organisées autour de `services`. Un service unique affichera la documentation directement, plusieurs services afficheront un sélecteur.
 
-### Mode mono-service
+### Exemple avec un service
 
 ```yaml
 version: "1.0"
 info:
   title: "My Application"
   version: "1.0.0"
-  package: "metrics"
-servers:
-  - url: "https://api.example.com"
-    description: "Production"
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total HTTP requests"
+services:
+  default:
+    info:
+      title: "My Service"
+      version: "1.0.0"
+      package: "metrics"
+    servers:
+      - url: "https://api.example.com"
+        description: "Production"
+    metrics:
+      requests_total:
+        namespace: http
+        subsystem: server
+        type: counter
+        help: "Total HTTP requests"
 ```
 
-### Mode multi-services
+### Exemple avec plusieurs services
 
 ```yaml
 version: "1.0"
@@ -192,6 +197,7 @@ services:
     info:
       title: "API Gateway"
       version: "1.0.0"
+      package: "ApiGateway.Metrics"
     servers:
       - url: "https://api.example.com"
     metrics:
@@ -203,8 +209,12 @@ services:
     info:
       title: "User Service"
       version: "1.0.0"
+      package: "UserService.Metrics"
     metrics:
-      # ...
+      users_total:
+        namespace: app
+        type: counter
+        help: "Total users"
 ```
 
 ## Licence

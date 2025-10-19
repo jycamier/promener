@@ -29,17 +29,12 @@ func NewGoGenerator() (*GoGenerator, error) {
 	return &GoGenerator{tmpl: tmpl}, nil
 }
 
-// Language returns the language this generator targets
-func (g *GoGenerator) Language() Language {
-	return LanguageGo
-}
-
 // Generate generates Go code from a specification
-func (g *GoGenerator) Generate(spec *domain.Specification) ([]byte, error) {
+func (g *GoGenerator) Generate(spec *domain.Specification, packageName string) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// Build template data organized by namespace/subsystem
-	data := buildTemplateData(spec)
+	data := buildTemplateData(spec, packageName)
 
 	if err := g.tmpl.Execute(&buf, data); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
@@ -55,8 +50,8 @@ func (g *GoGenerator) Generate(spec *domain.Specification) ([]byte, error) {
 }
 
 // GenerateFile generates Go code and writes it to a file
-func (g *GoGenerator) GenerateFile(spec *domain.Specification, outputPath string) error {
-	code, err := g.Generate(spec)
+func (g *GoGenerator) GenerateFile(spec *domain.Specification, packageName string, outputPath string) error {
+	code, err := g.Generate(spec, packageName)
 	if err != nil {
 		return err
 	}
@@ -69,7 +64,7 @@ func (g *GoGenerator) GenerateFile(spec *domain.Specification, outputPath string
 }
 
 // GenerateFxFile generates an FX module file (Go-specific feature)
-func (g *GoGenerator) GenerateFxFile(spec *domain.Specification, outputPath string) error {
+func (g *GoGenerator) GenerateFxFile(spec *domain.Specification, packageName string, outputPath string) error {
 	var buf bytes.Buffer
 
 	// Parse FX template
@@ -79,7 +74,7 @@ func (g *GoGenerator) GenerateFxFile(spec *domain.Specification, outputPath stri
 	}
 
 	// Build template data
-	data := buildTemplateData(spec)
+	data := buildTemplateData(spec, packageName)
 
 	// Execute template
 	if err := fxTmpl.Execute(&buf, data); err != nil {

@@ -41,14 +41,15 @@ Examples:
 			return fmt.Errorf("failed to parse specification: %w", err)
 		}
 
-		// Override package name if provided via flag
-		if nodejsPackageName != "" {
-			spec.Info.Package = nodejsPackageName
+		// Create Node.js generator
+		g, err := generator.NewNodeJSGenerator()
+		if err != nil {
+			return fmt.Errorf("failed to create Node.js generator: %w", err)
 		}
 
 		// Generate the Node.js code
 		metricsFile := filepath.Join(outputDir, "metrics.ts")
-		if err := generator.GenerateForLanguage(spec, generator.LanguageNodeJS, metricsFile); err != nil {
+		if err := g.GenerateFile(spec, metricsFile); err != nil {
 			return fmt.Errorf("failed to generate code: %w", err)
 		}
 

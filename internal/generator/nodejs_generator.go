@@ -27,11 +27,6 @@ func NewNodeJSGenerator() (*NodeJSGenerator, error) {
 	return &NodeJSGenerator{tmpl: tmpl}, nil
 }
 
-// Language returns the language this generator targets
-func (g *NodeJSGenerator) Language() Language {
-	return LanguageNodeJS
-}
-
 // Generate generates TypeScript code from a specification
 func (g *NodeJSGenerator) Generate(spec *domain.Specification) ([]byte, error) {
 	var buf bytes.Buffer
@@ -62,7 +57,7 @@ func (g *NodeJSGenerator) GenerateFile(spec *domain.Specification, outputPath st
 
 // buildNodeJSTemplateData builds template data with Node.js-specific types
 func buildNodeJSTemplateData(spec *domain.Specification) *TemplateData {
-	data := buildTemplateData(spec)
+	data := buildTemplateData(spec, "")
 
 	// Update NodeJSType for prom-client
 	for i := range data.Namespaces {
@@ -84,11 +79,4 @@ func buildNodeJSTemplateData(spec *domain.Specification) *TemplateData {
 	}
 
 	return data
-}
-
-func init() {
-	// Register Node.js generator
-	RegisterGenerator(LanguageNodeJS, func() (CodeGenerator, error) {
-		return NewNodeJSGenerator()
-	})
 }

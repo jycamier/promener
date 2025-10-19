@@ -48,14 +48,20 @@ Examples:
 			return fmt.Errorf("failed to parse specification: %w", err)
 		}
 
-		// Override package name if provided via flag
-		if goPackageName != "" {
-			spec.Info.Package = goPackageName
+		// Determine package name: -p flag or output directory name
+		packageName := goPackageName
+		if packageName == "" {
+			packageName = filepath.Base(outputDir)
 		}
 
 		// Generate the Go code
+		g, err := generator.NewGoGenerator()
+		if err != nil {
+			return fmt.Errorf("failed to create generator: %w", err)
+		}
+
 		metricsFile := filepath.Join(outputDir, "metrics.go")
-		if err := generator.GenerateForLanguage(spec, generator.LanguageGo, metricsFile); err != nil {
+		if err := g.GenerateFile(spec, packageName, metricsFile); err != nil {
 			return fmt.Errorf("failed to generate code: %w", err)
 		}
 
@@ -63,13 +69,8 @@ Examples:
 
 		// Generate DI extensions if requested
 		if goGenerateDI && goGenerateFx {
-			g, err := generator.NewGoGenerator()
-			if err != nil {
-				return fmt.Errorf("failed to create generator: %w", err)
-			}
-
 			fxFile := filepath.Join(outputDir, "metrics_fx.go")
-			if err := g.GenerateFxFile(spec, fxFile); err != nil {
+			if err := g.GenerateFxFile(spec, packageName, fxFile); err != nil {
 				return fmt.Errorf("failed to generate FX module: %w", err)
 			}
 			fmt.Printf("✓ Generated FX module: %s\n", fxFile)

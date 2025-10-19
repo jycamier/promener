@@ -3,85 +3,88 @@ info:
   title: "My Application Metrics"
   description: "Prometheus metrics for my application"
   version: "1.0.0"
-  package: "metrics"
 
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total number of HTTP requests"
-    labels:
-      - method
-      - status
-      - endpoint
-    deprecated:
-      since: "2024-01-15"
-      replacedBy: "request_duration_seconds"
-      reason: "Switching to histogram for better latency tracking"
-    ## Exemples
-
-
-  request_duration_seconds:
-    namespace: http
-    subsystem: server
-    type: histogram
-    help: "HTTP request duration in seconds"
-    labels:
-      - method
-      - endpoint
-    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
-
-  active_connections:
-    namespace: http
-    subsystem: server
-    type: gauge
-    help: "Number of active connections"
-    labels:
-      - protocol
-
-  response_size_bytes:
-    namespace: http
-    subsystem: server
-    type: summary
-    help: "Response size in bytes"
-    labels:
-      - method
-    objectives:
-      0.5: 0.05
-      0.9: 0.01
-      0.99: 0.001
-
-  queries_total:
-    namespace: db
-    subsystem: postgres
-    type: counter
-    help: "Total number of database queries"
-    labels:
-      - operation
-      - table
-    constLabels:
-      environment: "${ENVIRONMENT:production}"
-      region: "${REGION}"
+services:
+  default:
+    info:
+      title: "My Application"
       version: "1.0.0"
+      package: "metrics"
+    metrics:
+      requests_total:
+        namespace: http
+        subsystem: server
+        type: counter
+        help: "Total number of HTTP requests"
+        labels:
+          - method
+          - status
+          - endpoint
+        deprecated:
+          since: "2024-01-15"
+          replacedBy: "request_duration_seconds"
+          reason: "Switching to histogram for better latency tracking"
 
-  query_duration_seconds:
-    namespace: db
-    subsystem: postgres
-    type: histogram
-    help: "Database query duration in seconds"
-    labels:
-      - operation
-      - table
-    buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5]
+      request_duration_seconds:
+        namespace: http
+        subsystem: server
+        type: histogram
+        help: "HTTP request duration in seconds"
+        labels:
+          - method
+          - endpoint
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
 
-  connection_pool_size:
-    namespace: db
-    subsystem: postgres
-    type: gauge
-    help: "Current database connection pool size"
-    labels:
-      - state
+      active_connections:
+        namespace: http
+        subsystem: server
+        type: gauge
+        help: "Number of active connections"
+        labels:
+          - protocol
+
+      response_size_bytes:
+        namespace: http
+        subsystem: server
+        type: summary
+        help: "Response size in bytes"
+        labels:
+          - method
+        objectives:
+          0.5: 0.05
+          0.9: 0.01
+          0.99: 0.001
+
+      queries_total:
+        namespace: db
+        subsystem: postgres
+        type: counter
+        help: "Total number of database queries"
+        labels:
+          - operation
+          - table
+        constLabels:
+          environment: "${ENVIRONMENT:production}"
+          region: "${REGION}"
+          version: "1.0.0"
+
+      query_duration_seconds:
+        namespace: db
+        subsystem: postgres
+        type: histogram
+        help: "Database query duration in seconds"
+        labels:
+          - operation
+          - table
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5]
+
+      connection_pool_size:
+        namespace: db
+        subsystem: postgres
+        type: gauge
+        help: "Current database connection pool size"
+        labels:
+          - state
 
 components:
   labels:

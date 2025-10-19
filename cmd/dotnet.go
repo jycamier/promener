@@ -42,14 +42,15 @@ Examples:
 			return fmt.Errorf("failed to parse specification: %w", err)
 		}
 
-		// Override namespace if provided via flag
-		if dotnetNamespace != "" {
-			spec.Info.Package = dotnetNamespace
+		// Create .NET generator
+		g, err := generator.NewDotNetGenerator()
+		if err != nil {
+			return fmt.Errorf("failed to create .NET generator: %w", err)
 		}
 
 		// Generate the .NET code
 		metricsFile := filepath.Join(outputDir, "Metrics.cs")
-		if err := generator.GenerateForLanguage(spec, generator.LanguageDotNet, metricsFile); err != nil {
+		if err := g.GenerateFile(spec, metricsFile); err != nil {
 			return fmt.Errorf("failed to generate code: %w", err)
 		}
 
@@ -57,11 +58,6 @@ Examples:
 
 		// Generate DI extensions if requested
 		if dotnetGenerateDI {
-			g, err := generator.NewDotNetGenerator()
-			if err != nil {
-				return fmt.Errorf("failed to create .NET generator: %w", err)
-			}
-
 			diFile := filepath.Join(outputDir, "Metrics.DependencyInjection.cs")
 			if err := g.GenerateDIFile(spec, diFile); err != nil {
 				return fmt.Errorf("failed to generate DI extensions: %w", err)

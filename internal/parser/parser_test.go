@@ -25,26 +25,34 @@ version: "1.0"
 info:
   title: "Test Metrics"
   version: "1.0.0"
-  package: "metrics"
 
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total requests"
-    labels:
-      - method
-      - status
+services:
+  default:
+    info:
+      title: "Test Service"
+      version: "1.0.0"
+      package: "metrics"
+    metrics:
+      requests_total:
+        namespace: http
+        subsystem: server
+        type: counter
+        help: "Total requests"
+        labels:
+          - method
+          - status
 `,
 			wantErr: false,
 			check: func(t *testing.T, spec *domain.Specification) {
 				assert.Equal(t, "1.0", spec.Version)
 				assert.Equal(t, "Test Metrics", spec.Info.Title)
-				assert.Equal(t, "metrics", spec.Info.Package)
-				require.Len(t, spec.Metrics, 1)
+				require.Len(t, spec.Services, 1)
 
-				metric, ok := spec.Metrics["requests_total"]
+				service, ok := spec.Services["default"]
+				require.True(t, ok)
+				require.Len(t, service.Metrics, 1)
+
+				metric, ok := service.Metrics["requests_total"]
 				require.True(t, ok)
 				assert.Equal(t, "http", metric.Namespace)
 				assert.Equal(t, "server", metric.Subsystem)
@@ -60,26 +68,32 @@ version: "1.0"
 info:
   title: "Test Metrics"
   version: "1.0.0"
-  package: "metrics"
 
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total requests"
-    labels:
-      - method
-    constLabels:
-      environment: "production"
+services:
+  default:
+    info:
+      title: "Test Service"
       version: "1.0.0"
+      package: "metrics"
+    metrics:
+      requests_total:
+        namespace: http
+        subsystem: server
+        type: counter
+        help: "Total requests"
+        labels:
+          - method
+        constLabels:
+          environment: "production"
+          version: "1.0.0"
 `,
 			wantErr: false,
 			check: func(t *testing.T, spec *domain.Specification) {
-				metric := spec.Metrics["requests_total"]
+				metric := spec.Services["default"].Metrics["requests_total"]
 				require.NotNil(t, metric.ConstLabels)
-				assert.Equal(t, "production", metric.ConstLabels["environment"])
-				assert.Equal(t, "1.0.0", metric.ConstLabels["version"])
+				constLabelsMap := metric.ConstLabels.ToMap()
+				assert.Equal(t, "production", constLabelsMap["environment"])
+				assert.Equal(t, "1.0.0", constLabelsMap["version"])
 			},
 		},
 		{
@@ -89,21 +103,26 @@ version: "1.0"
 info:
   title: "Test Metrics"
   version: "1.0.0"
-  package: "metrics"
 
-metrics:
-  request_duration:
-    namespace: http
-    subsystem: server
-    type: histogram
-    help: "Request duration"
-    labels:
-      - method
-    buckets: [0.1, 0.5, 1.0, 5.0]
+services:
+  default:
+    info:
+      title: "Test Service"
+      version: "1.0.0"
+      package: "metrics"
+    metrics:
+      request_duration:
+        namespace: http
+        subsystem: server
+        type: histogram
+        help: "Request duration"
+        labels:
+          - method
+        buckets: [0.1, 0.5, 1.0, 5.0]
 `,
 			wantErr: false,
 			check: func(t *testing.T, spec *domain.Specification) {
-				metric := spec.Metrics["request_duration"]
+				metric := spec.Services["default"].Metrics["request_duration"]
 				assert.Equal(t, domain.MetricTypeHistogram, metric.Type)
 				assert.Equal(t, []float64{0.1, 0.5, 1.0, 5.0}, metric.Buckets)
 			},
@@ -115,24 +134,29 @@ version: "1.0"
 info:
   title: "Test Metrics"
   version: "1.0.0"
-  package: "metrics"
 
-metrics:
-  response_size:
-    namespace: http
-    subsystem: server
-    type: summary
-    help: "Response size"
-    labels:
-      - method
-    objectives:
-      0.5: 0.05
-      0.9: 0.01
-      0.99: 0.001
+services:
+  default:
+    info:
+      title: "Test Service"
+      version: "1.0.0"
+      package: "metrics"
+    metrics:
+      response_size:
+        namespace: http
+        subsystem: server
+        type: summary
+        help: "Response size"
+        labels:
+          - method
+        objectives:
+          0.5: 0.05
+          0.9: 0.01
+          0.99: 0.001
 `,
 			wantErr: false,
 			check: func(t *testing.T, spec *domain.Specification) {
-				metric := spec.Metrics["response_size"]
+				metric := spec.Services["default"].Metrics["response_size"]
 				assert.Equal(t, domain.MetricTypeSummary, metric.Type)
 				require.NotNil(t, metric.Objectives)
 				assert.Equal(t, 0.05, metric.Objectives[0.5])
@@ -155,9 +179,13 @@ version: "1.0"
 info:
   title: "Test Metrics"
 
-metrics:
-  test:
-    type: counter
+services:
+  default:
+    info:
+      title: "Test Service"
+    metrics:
+      test:
+        type: counter
 `,
 			wantErr: true,
 			errMsg:  "invalid specification",
@@ -186,7 +214,6 @@ metrics:
 }
 
 func TestParser_ParseFile(t *testing.T) {
-	// Create temp directory for test files
 	tempDir := t.TempDir()
 
 	t.Run("parse valid file", func(t *testing.T) {
@@ -195,16 +222,21 @@ version: "1.0"
 info:
   title: "Test Metrics"
   version: "1.0.0"
-  package: "metrics"
 
-metrics:
-  test_metric:
-    namespace: test
-    subsystem: example
-    type: counter
-    help: "Test metric"
-    labels:
-      - label1
+services:
+  default:
+    info:
+      title: "Test Service"
+      version: "1.0.0"
+      package: "metrics"
+    metrics:
+      test_metric:
+        namespace: test
+        subsystem: example
+        type: counter
+        help: "Test metric"
+        labels:
+          - label1
 `
 		filePath := filepath.Join(tempDir, "valid.yaml")
 		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
@@ -242,21 +274,25 @@ version: "1.0"
 info:
   title: "Test Metrics"
   version: "1.0.0"
-  package: "metrics"
 
-metrics:
-  my_metric:
-    namespace: test
-    subsystem: example
-    type: counter
-    help: "Test metric"
+services:
+  default:
+    info:
+      title: "Test Service"
+      version: "1.0.0"
+      package: "metrics"
+    metrics:
+      my_metric:
+        namespace: test
+        subsystem: example
+        type: counter
+        help: "Test metric"
 `
 
 	p := New()
 	spec, err := p.Parse([]byte(yaml))
 	require.NoError(t, err)
 
-	// Check that the metric name is enriched from the key
-	metric := spec.Metrics["my_metric"]
+	metric := spec.Services["default"].Metrics["my_metric"]
 	assert.Equal(t, "my_metric", metric.Name)
 }

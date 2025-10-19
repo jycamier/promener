@@ -8,8 +8,18 @@ import (
 	"github.com/jycamier/promener/internal/domain"
 )
 
+// Go reserved keywords
+var goReservedKeywords = map[string]bool{
+	"break": true, "case": true, "chan": true, "const": true, "continue": true,
+	"default": true, "defer": true, "else": true, "fallthrough": true, "for": true,
+	"func": true, "go": true, "goto": true, "if": true, "import": true,
+	"interface": true, "map": true, "package": true, "range": true, "return": true,
+	"select": true, "struct": true, "switch": true, "type": true, "var": true,
+}
+
 // TemplateData contains all data for template generation
 type TemplateData struct {
+	PackageName       string
 	Info              domain.Info
 	Namespaces        []Namespace
 	NeedsOsImport     bool
@@ -88,91 +98,101 @@ func toUpperFirst(s string) string {
 	return string(r)
 }
 
+// escapeGoKeyword adds underscore suffix if the identifier is a Go reserved keyword
+func escapeGoKeyword(s string) string {
+	if goReservedKeywords[s] {
+		return s + "_"
+	}
+	return s
+}
+
 // buildTemplateData organizes metrics by namespace and subsystem
-func buildTemplateData(spec *domain.Specification) *TemplateData {
+func buildTemplateData(spec *domain.Specification, packageName string) *TemplateData {
 	nsMap := make(map[string]map[string][]MetricData)
 
 	// Group metrics by namespace and subsystem
-	for key, metric := range spec.Metrics {
-		if metric.Name == "" {
-			metric.Name = key
+	for _, service := range spec.Services {
+		for key, metric := range service.Metrics {
+			if metric.Name == "" {
+				metric.Name = key
+			}
+
+			ns := toCamelCase(metric.Namespace)
+			ss := toCamelCase(metric.Subsystem)
+
+			if nsMap[ns] == nil {
+				nsMap[ns] = make(map[string][]MetricData)
+			}
+
+			metricData := MetricData{
+				Name:        metric.Name,
+				Namespace:   metric.Namespace,
+				Subsystem:   metric.Subsystem,
+				Type:        string(metric.Type),
+				Help:        metric.Help,
+				Labels:      metric.GetLabelNames(),
+				Buckets:     metric.Buckets,
+				Objectives:  metric.Objectives,
+				ConstLabels: ParseConstLabelsMap(metric.ConstLabels.ToMap()),
+				FieldName:   toLowerCamelCase(metric.Name),
+				MethodName:  toCamelCase(metric.Name),
+				FullName:    metric.FullName(),
+				Deprecated:  metric.Deprecated,
+			}
+
+			// Set VecType, OptsType, and Constructor based on metric type
+			switch metric.Type {
+			case domain.MetricTypeCounter:
+				metricData.VecType = "CounterVec"
+				metricData.OptsType = "CounterOpts"
+				metricData.Constructor = "prometheus.NewCounterVec"
+			case domain.MetricTypeGauge:
+				metricData.VecType = "GaugeVec"
+				metricData.OptsType = "GaugeOpts"
+				metricData.Constructor = "prometheus.NewGaugeVec"
+			case domain.MetricTypeHistogram:
+				metricData.VecType = "HistogramVec"
+				metricData.OptsType = "HistogramOpts"
+				metricData.Constructor = "prometheus.NewHistogramVec"
+			case domain.MetricTypeSummary:
+				metricData.VecType = "SummaryVec"
+				metricData.OptsType = "SummaryOpts"
+				metricData.Constructor = "prometheus.NewSummaryVec"
+			}
+
+			// Build method parameters and arguments for Go
+			var params []string
+			var args []string
+			labelNames := metric.GetLabelNames()
+			for _, label := range labelNames {
+				paramName := escapeGoKeyword(toLowerCamelCase(label))
+				params = append(params, fmt.Sprintf("%s string", paramName))
+				args = append(args, paramName)
+			}
+			metricData.MethodParams = strings.Join(params, ", ")
+			metricData.MethodArgs = strings.Join(args, ", ")
+
+			// Build method parameters and arguments for .NET
+			var dotnetParams []string
+			var dotnetArgs []string
+			for _, label := range labelNames {
+				paramName := toLowerCamelCase(label)
+				dotnetParams = append(dotnetParams, fmt.Sprintf("string %s", paramName))
+				dotnetArgs = append(dotnetArgs, paramName)
+			}
+			metricData.DotNetMethodParams = strings.Join(dotnetParams, ", ")
+			metricData.DotNetMethodArgs = strings.Join(dotnetArgs, ", ")
+
+			// Build method parameters for Node.js/TypeScript
+			var nodejsParams []string
+			for _, label := range labelNames {
+				paramName := toLowerCamelCase(label)
+				nodejsParams = append(nodejsParams, fmt.Sprintf("%s: string", paramName))
+			}
+			metricData.NodeJSMethodParams = strings.Join(nodejsParams, ", ")
+
+			nsMap[ns][ss] = append(nsMap[ns][ss], metricData)
 		}
-
-		ns := toCamelCase(metric.Namespace)
-		ss := toCamelCase(metric.Subsystem)
-
-		if nsMap[ns] == nil {
-			nsMap[ns] = make(map[string][]MetricData)
-		}
-
-		metricData := MetricData{
-			Name:        metric.Name,
-			Namespace:   metric.Namespace,
-			Subsystem:   metric.Subsystem,
-			Type:        string(metric.Type),
-			Help:        metric.Help,
-			Labels:      metric.GetLabelNames(),
-			Buckets:     metric.Buckets,
-			Objectives:  metric.Objectives,
-			ConstLabels: ParseConstLabelsMap(metric.ConstLabels.ToMap()),
-			FieldName:   toLowerCamelCase(metric.Name),
-			MethodName:  toCamelCase(metric.Name),
-			FullName:    metric.FullName(),
-			Deprecated:  metric.Deprecated,
-		}
-
-		// Set VecType, OptsType, and Constructor based on metric type
-		switch metric.Type {
-		case domain.MetricTypeCounter:
-			metricData.VecType = "CounterVec"
-			metricData.OptsType = "CounterOpts"
-			metricData.Constructor = "prometheus.NewCounterVec"
-		case domain.MetricTypeGauge:
-			metricData.VecType = "GaugeVec"
-			metricData.OptsType = "GaugeOpts"
-			metricData.Constructor = "prometheus.NewGaugeVec"
-		case domain.MetricTypeHistogram:
-			metricData.VecType = "HistogramVec"
-			metricData.OptsType = "HistogramOpts"
-			metricData.Constructor = "prometheus.NewHistogramVec"
-		case domain.MetricTypeSummary:
-			metricData.VecType = "SummaryVec"
-			metricData.OptsType = "SummaryOpts"
-			metricData.Constructor = "prometheus.NewSummaryVec"
-		}
-
-		// Build method parameters and arguments for Go
-		var params []string
-		var args []string
-		labelNames := metric.GetLabelNames()
-		for _, label := range labelNames {
-			paramName := toLowerCamelCase(label)
-			params = append(params, fmt.Sprintf("%s string", paramName))
-			args = append(args, paramName)
-		}
-		metricData.MethodParams = strings.Join(params, ", ")
-		metricData.MethodArgs = strings.Join(args, ", ")
-
-		// Build method parameters and arguments for .NET
-		var dotnetParams []string
-		var dotnetArgs []string
-		for _, label := range labelNames {
-			paramName := toLowerCamelCase(label)
-			dotnetParams = append(dotnetParams, fmt.Sprintf("string %s", paramName))
-			dotnetArgs = append(dotnetArgs, paramName)
-		}
-		metricData.DotNetMethodParams = strings.Join(dotnetParams, ", ")
-		metricData.DotNetMethodArgs = strings.Join(dotnetArgs, ", ")
-
-		// Build method parameters for Node.js/TypeScript
-		var nodejsParams []string
-		for _, label := range labelNames {
-			paramName := toLowerCamelCase(label)
-			nodejsParams = append(nodejsParams, fmt.Sprintf("%s: string", paramName))
-		}
-		metricData.NodeJSMethodParams = strings.Join(nodejsParams, ", ")
-
-		nsMap[ns][ss] = append(nsMap[ns][ss], metricData)
 	}
 
 	// Build template data structure
@@ -194,17 +214,20 @@ func buildTemplateData(spec *domain.Specification) *TemplateData {
 	// Check if we need os import and helper function
 	needsOs := false
 	needsHelper := false
-	for _, metric := range spec.Metrics {
-		constLabelsMap := metric.ConstLabels.ToMap()
-		if HasEnvVarsMap(constLabelsMap) {
-			needsOs = true
-		}
-		if NeedsHelperFuncMap(constLabelsMap) {
-			needsHelper = true
+	for _, service := range spec.Services {
+		for _, metric := range service.Metrics {
+			constLabelsMap := metric.ConstLabels.ToMap()
+			if HasEnvVarsMap(constLabelsMap) {
+				needsOs = true
+			}
+			if NeedsHelperFuncMap(constLabelsMap) {
+				needsHelper = true
+			}
 		}
 	}
 
 	return &TemplateData{
+		PackageName:     packageName,
 		Info:            spec.Info,
 		Namespaces:      namespaces,
 		NeedsOsImport:   needsOs,

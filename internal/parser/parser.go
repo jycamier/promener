@@ -33,12 +33,14 @@ func (p *Parser) Parse(data []byte) (*domain.Specification, error) {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	// Enrich metrics with their key names if Name is not set
-	for key, metric := range spec.Metrics {
-		if metric.Name == "" {
-			metric.Name = key
-			spec.Metrics[key] = metric
+	for serviceName, service := range spec.Services {
+		for key, metric := range service.Metrics {
+			if metric.Name == "" {
+				metric.Name = key
+				service.Metrics[key] = metric
+			}
 		}
+		spec.Services[serviceName] = service
 	}
 
 	if err := spec.Validate(); err != nil {
