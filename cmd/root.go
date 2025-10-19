@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -10,21 +9,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "promener",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "Generates structured Prometheus metrics code with named parameters and interactive HTML documentation from YAML specifications",
+	Long: `Promener is a code generator for Prometheus metrics that creates type-safe,
+organized code from YAML specifications.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+Features:
+- Type-safe metrics code organized by namespace and subsystem
+- Generated methods with typed parameters (one per label)
+- Support for all Prometheus metric types (Counter, Gauge, Histogram, Summary)
+- Constant labels with environment variable substitution
+- Optional dependency injection module generation (e.g., Uber FX)
+- Thread-safe initialization
+- Interactive HTML documentation with search, examples, and dark mode
+
+Example workflow:
+1. Define metrics in YAML with namespace, subsystem, type, and labels
+2. Generate code: promener generate -i metrics.yaml -o metrics.{ext}
+3. Use in your application with a clean, structured API`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -42,10 +46,4 @@ func init() {
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.promener.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
-
