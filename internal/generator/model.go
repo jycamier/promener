@@ -59,6 +59,8 @@ type MetricData struct {
 	VecType            string
 	OptsType           string
 	Constructor        string
+	HasLabels          bool   // true if the metric has labels (uses Vec types)
+	SimpleType         string // The simple type without Vec (Counter, Gauge, etc.)
 	Deprecated         *domain.Deprecated
 }
 

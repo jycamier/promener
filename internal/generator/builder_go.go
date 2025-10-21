@@ -28,23 +28,38 @@ func (b *GoTemplateDataBuilder) BuildTemplateData(spec *domain.Specification, pa
 		for j := range data.Namespaces[i].Subsystems {
 			for k := range data.Namespaces[i].Subsystems[j].Metrics {
 				metric := &data.Namespaces[i].Subsystems[j].Metrics[k]
+
+				// Check if metric has labels
+				metric.HasLabels = len(metric.Labels) > 0
+
+				// Set default values (without Vec)
 				switch domain.MetricType(metric.Type) {
 				case domain.MetricTypeCounter:
-					metric.VecType = "CounterVec"
+					metric.SimpleType = "Counter"
 					metric.OptsType = "CounterOpts"
-					metric.Constructor = "prometheus.NewCounterVec"
+					metric.VecType = "Counter"
+					metric.Constructor = "prometheus.NewCounter"
 				case domain.MetricTypeGauge:
-					metric.VecType = "GaugeVec"
+					metric.SimpleType = "Gauge"
 					metric.OptsType = "GaugeOpts"
-					metric.Constructor = "prometheus.NewGaugeVec"
+					metric.VecType = "Gauge"
+					metric.Constructor = "prometheus.NewGauge"
 				case domain.MetricTypeHistogram:
-					metric.VecType = "HistogramVec"
+					metric.SimpleType = "Histogram"
 					metric.OptsType = "HistogramOpts"
-					metric.Constructor = "prometheus.NewHistogramVec"
+					metric.VecType = "Histogram"
+					metric.Constructor = "prometheus.NewHistogram"
 				case domain.MetricTypeSummary:
-					metric.VecType = "SummaryVec"
+					metric.SimpleType = "Summary"
 					metric.OptsType = "SummaryOpts"
-					metric.Constructor = "prometheus.NewSummaryVec"
+					metric.VecType = "Summary"
+					metric.Constructor = "prometheus.NewSummary"
+				}
+
+				// Override with Vec types if metric has labels
+				if metric.HasLabels {
+					metric.VecType = metric.SimpleType + "Vec"
+					metric.Constructor = "prometheus.New" + metric.SimpleType + "Vec"
 				}
 
 				// Build method parameters and arguments
