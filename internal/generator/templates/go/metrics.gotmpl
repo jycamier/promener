@@ -62,7 +62,7 @@ type {{ $ns.Name }}{{ $ss.Name }}Metrics interface {
 // {{ $ns.Name }}{{ $ss.Name }}MetricsImpl is the concrete implementation of {{ $ns.Name }}{{ $ss.Name }}Metrics
 type {{ $ns.Name }}{{ $ss.Name }}MetricsImpl struct {
 	{{- range $m := $ss.Metrics }}
-	{{ $m.FieldName }} *prometheus.{{ $m.VecType }}
+	{{ $m.FieldName }} {{ if $m.HasLabels }}*{{ end }}prometheus.{{ $m.VecType }}
 	{{- end }}
 }
 
