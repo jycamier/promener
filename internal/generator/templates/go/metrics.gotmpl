@@ -109,6 +109,19 @@ func NewMetricsRegistry(registerer prometheus.Registerer) *MetricsRegistry {
 			},
 			{{- end }}
 		}
+
+		// Register all metrics with the provided registerer
+		{{- range $ns := .Namespaces }}
+		{{- range $ss := $ns.Subsystems }}
+		if {{ $ss.Name | toLower }}, ok := registry.{{ $ns.Name }}.{{ $ss.Name }}.(*{{ $ns.Name }}{{ $ss.Name }}MetricsImpl); ok {
+			registerer.MustRegister(
+				{{- range $m := $ss.Metrics }}
+				{{ $ss.Name | toLower }}.{{ $m.FieldName }},
+				{{- end }}
+			)
+		}
+		{{- end }}
+		{{- end }}
 	})
 	return registry
 }
