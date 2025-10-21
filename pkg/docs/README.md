@@ -69,6 +69,62 @@ if err != nil {
 }
 ```
 
+### Builder pour multi-service
+
+Le Builder permet d'agréger plusieurs spécifications en une seule documentation HTML multi-service :
+
+```go
+// Charger des specs depuis différentes sources
+apiSpec, _ := docs.LoadSpec("api-gateway.yaml")
+userSpec, _ := docs.LoadSpecFromURL("https://user-service/metrics.yaml")
+orderData := []byte(`...`) // YAML bytes
+orderSpec, _ := docs.LoadSpecFromBytes(orderData)
+
+// Construire le HTML multi-service
+builder := docs.NewHTMLBuilder("My Platform", "1.0.0")
+builder.SetDescription("Platform-wide metrics documentation")
+builder.AddFromSpec(apiSpec)    // Merge tous les services de apiSpec
+builder.AddFromSpec(userSpec)   // Merge tous les services de userSpec
+builder.AddFromSpec(orderSpec)  // Merge tous les services de orderSpec
+
+// Générer le HTML final
+html, err := builder.BuildHTML()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Ou écrire directement dans un fichier
+err = builder.BuildHTMLFile("platform-docs.html")
+```
+
+Le Builder supporte le chaînage de méthodes :
+
+```go
+html, err := docs.NewHTMLBuilder("Platform", "1.0.0").
+    SetDescription("All services").
+    AddFromSpec(spec1).
+    AddFromSpec(spec2).
+    BuildHTML()
+```
+
+### Charger depuis différentes sources
+
+```go
+// Depuis un fichier local
+spec1, err := docs.LoadSpec("metrics.yaml")
+
+// Depuis une URL HTTP
+spec2, err := docs.LoadSpecFromURL("https://api.example.com/metrics.yaml")
+
+// Depuis des bytes YAML
+yamlData := []byte(`...`)
+spec3, err := docs.LoadSpecFromBytes(yamlData)
+
+// Depuis un io.Reader (ex: HTTP response body)
+resp, _ := http.Get("https://...")
+spec4, err := docs.LoadSpecFromReader(resp.Body)
+```
+
 ### Réutiliser le générateur
 
 Si vous générez plusieurs documents, réutilisez le générateur pour de meilleures performances :
@@ -107,13 +163,21 @@ http.ListenAndServe(":8080", nil)
 
 ## API Reference
 
-### Fonctions principales
+### Chargement de spécifications
 
 #### `LoadSpec(path string) (*Specification, error)`
-Charge et valide une spécification depuis un fichier YAML.
+Charge et valide une spécification depuis un fichier YAML local.
 
 #### `LoadSpecFromBytes(data []byte) (*Specification, error)`
 Charge et valide une spécification depuis des bytes YAML.
+
+#### `LoadSpecFromURL(url string) (*Specification, error)`
+Charge et valide une spécification depuis une URL HTTP. L'URL doit retourner du contenu YAML.
+
+#### `LoadSpecFromReader(r io.Reader) (*Specification, error)`
+Charge et valide une spécification depuis un io.Reader (ex: http.Response.Body).
+
+### Génération HTML simple
 
 #### `GenerateHTML(spec *Specification) ([]byte, error)`
 Génère la documentation HTML depuis une spécification. Retourne les bytes HTML.
@@ -129,6 +193,29 @@ Fonction de commodité : charge un YAML et retourne le HTML en bytes.
 
 #### `GenerateHTMLFromBytes(yamlData []byte) ([]byte, error)`
 Fonction de commodité : charge depuis des bytes YAML et retourne le HTML.
+
+### Builder (Multi-service)
+
+#### `NewHTMLBuilder(title, version string) *HTMLBuilder`
+Crée un nouveau builder pour construire une documentation multi-service.
+
+#### `(*HTMLBuilder) SetDescription(description string) Builder`
+Définit la description de la documentation. Retourne le builder pour permettre le chaînage.
+
+#### `(*HTMLBuilder) AddFromSpec(spec *Specification) Builder`
+Fusionne tous les services d'une spécification dans le builder. Si un service avec le même nom existe déjà, il sera écrasé. Retourne le builder pour permettre le chaînage.
+
+#### `(*HTMLBuilder) AddService(name string, service Service) Builder`
+Ajoute un service individuel avec le nom spécifié. Retourne le builder pour permettre le chaînage.
+
+#### `(*HTMLBuilder) BuildHTML() ([]byte, error)`
+Génère le HTML final depuis tous les services agrégés. Valide la spécification avant la génération.
+
+#### `(*HTMLBuilder) BuildHTMLFile(outputPath string) error`
+Génère le HTML et l'écrit dans un fichier.
+
+#### `(*HTMLBuilder) GetSpecification() *Specification`
+Retourne la spécification sous-jacente en cours de construction.
 
 ### Type HTMLGenerator
 

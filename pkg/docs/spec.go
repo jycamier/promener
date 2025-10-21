@@ -2,15 +2,12 @@ package docs
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 
-	"github.com/jycamier/promener/internal/domain"
 	"gopkg.in/yaml.v3"
 )
-
-// Specification represents a Prometheus metrics specification.
-// It can be in single-service mode or multi-service mode.
-type Specification = domain.Specification
 
 // LoadSpec loads and validates a metrics specification from a YAML file.
 func LoadSpec(path string) (*Specification, error) {
@@ -34,4 +31,31 @@ func LoadSpecFromBytes(data []byte) (*Specification, error) {
 	}
 
 	return &spec, nil
+}
+
+// LoadSpecFromURL loads and validates a metrics specification from a URL.
+// The URL should return YAML content.
+func LoadSpecFromURL(url string) (*Specification, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch URL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
+	}
+
+	return LoadSpecFromReader(resp.Body)
+}
+
+// LoadSpecFromReader loads and validates a metrics specification from an io.Reader.
+// The reader should provide YAML content.
+func LoadSpecFromReader(r io.Reader) (*Specification, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from reader: %w", err)
+	}
+
+	return LoadSpecFromBytes(data)
 }
