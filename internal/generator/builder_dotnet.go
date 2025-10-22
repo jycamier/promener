@@ -50,6 +50,13 @@ func (b *DotNetTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 				}
 				metric.DotNetMethodParams = strings.Join(params, ", ")
 				metric.DotNetMethodArgs = strings.Join(args, ", ")
+
+				// Build const label variable names for WithLabels calls
+				var constLabelVars []string
+				for key := range metric.ConstLabels {
+					constLabelVars = append(constLabelVars, key)
+				}
+				metric.DotNetConstLabelArgs = strings.Join(constLabelVars, ", ")
 			}
 		}
 	}

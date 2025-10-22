@@ -51,9 +51,10 @@ type MetricData struct {
 	MethodName         string
 	MethodParams       string
 	MethodArgs         string
-	DotNetMethodParams string
-	DotNetMethodArgs   string
-	NodeJSMethodParams string
+	DotNetMethodParams   string
+	DotNetMethodArgs     string
+	DotNetConstLabelArgs string
+	NodeJSMethodParams   string
 	NodeJSType         string
 	FullName           string
 	VecType            string

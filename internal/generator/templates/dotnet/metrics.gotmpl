@@ -12,7 +12,19 @@ using System;
 {{- end }}
 {{- end }}
 
-namespace {{ .PackageName }}
+{{- define "dotnetConstLabels" -}}
+{{- if .ConstLabels -}}
+{{- range $key, $val := .ConstLabels }}
+            var {{ $key }} = {{ toCode $val }};
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{- define "dotnetWithLabels" -}}
+{{- if .DotNetMethodArgs }}{{ .DotNetMethodArgs }}{{- end }}{{- if and .DotNetMethodArgs .DotNetConstLabelArgs }}, {{ end }}{{- if .DotNetConstLabelArgs }}{{ .DotNetConstLabelArgs }}{{- end -}}
+{{- end }}
+
+namespace {{ .PackageName }}.Metrics
 {
 {{- range $ns := .Namespaces }}
 {{- range $ss := $ns.Subsystems }}
@@ -72,31 +84,58 @@ namespace {{ .PackageName }}
         public {{ $ns.Name }}{{ $ss.Name }}MetricsImpl()
         {
 {{- range $m := $ss.Metrics }}
-            _{{ $m.FieldName }} = Metrics.Create{{ $m.VecType }}(
+{{- if eq $m.Type "counter" }}
+            _{{ $m.FieldName }} = Prometheus.Metrics.CreateCounter(
                 "{{ $m.FullName }}",
-                "{{ $m.Help }}"{{- if $m.Labels }},
-                new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }} }{{- end }}
-{{- if eq $m.Type "histogram" }}{{- if $m.Buckets }},
+                "{{ $m.Help }}"{{- if or $m.Labels $m.ConstLabels }},
+                new CounterConfiguration
+                {
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} }
+                }{{- end }}
+            );
+{{- else if eq $m.Type "gauge" }}
+            _{{ $m.FieldName }} = Prometheus.Metrics.CreateGauge(
+                "{{ $m.FullName }}",
+                "{{ $m.Help }}"{{- if or $m.Labels $m.ConstLabels }},
+                new GaugeConfiguration
+                {
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} }
+                }{{- end }}
+            );
+{{- else if eq $m.Type "histogram" }}
+            _{{ $m.FieldName }} = Prometheus.Metrics.CreateHistogram(
+                "{{ $m.FullName }}",
+                "{{ $m.Help }}",
                 new HistogramConfiguration
                 {
-                    Buckets = new[] { {{- range $i, $bucket := $m.Buckets }}{{if $i}}, {{end}}{{ $bucket }}{{- end }} }
-                }{{- end }}{{- end }}
-{{- if eq $m.Type "summary" }}{{- if $m.Objectives }},
+                    {{- if or $m.Labels $m.ConstLabels }}
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} },
+                    {{- end }}
+                    {{- if $m.Buckets }}
+                    Buckets = new[] { {{- range $i, $bucket := $m.Buckets }}{{if $i}}, {{end}}{{ $bucket }}d{{ end -}} }
+                    {{- end }}
+                }
+            );
+{{- else if eq $m.Type "summary" }}
+            _{{ $m.FieldName }} = Prometheus.Metrics.CreateSummary(
+                "{{ $m.FullName }}",
+                "{{ $m.Help }}"{{- if or $m.Labels $m.ConstLabels $m.Objectives }},
                 new SummaryConfiguration
                 {
+                    {{- if or $m.Labels $m.ConstLabels }}
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} },
+                    {{- end }}
+                    {{- if $m.Objectives }}
                     Objectives = new[]
                     {
 {{- range $quantile, $epsilon := $m.Objectives }}
                         new QuantileEpsilonPair({{ $quantile }}, {{ $epsilon }}),
 {{- end }}
                     }
-                }{{- end }}{{- end }}
-            ){{- if $m.ConstLabels }}.WithLabels(new Dictionary<string, string>
-            {
-                {{- range $key, $val := $m.ConstLabels }}
-                { "{{ $key }}", {{ toCode $val }} },
-                {{- end }}
-            }){{- end }};
+                    {{- end }}
+                }{{- end }}
+            );
+{{- end }}
 {{- end }}
         }
 {{- range $m := $ss.Metrics }}
@@ -105,8 +144,9 @@ namespace {{ .PackageName }}
 
         public void Inc{{ $m.MethodName }}({{ $m.DotNetMethodParams }})
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Inc();
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Inc();
             {{- else }}
             _{{ $m.FieldName }}.Inc();
             {{- end }}
@@ -115,8 +155,9 @@ namespace {{ .PackageName }}
 
         public void Add{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value)
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Inc(value);
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Inc(value);
             {{- else }}
             _{{ $m.FieldName }}.Inc(value);
             {{- end }}
@@ -127,8 +168,9 @@ namespace {{ .PackageName }}
 
         public void Set{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value)
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Set(value);
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Set(value);
             {{- else }}
             _{{ $m.FieldName }}.Set(value);
             {{- end }}
@@ -137,8 +179,9 @@ namespace {{ .PackageName }}
 
         public void Inc{{ $m.MethodName }}({{ $m.DotNetMethodParams }})
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Inc();
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Inc();
             {{- else }}
             _{{ $m.FieldName }}.Inc();
             {{- end }}
@@ -147,8 +190,9 @@ namespace {{ .PackageName }}
 
         public void Dec{{ $m.MethodName }}({{ $m.DotNetMethodParams }})
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Dec();
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Dec();
             {{- else }}
             _{{ $m.FieldName }}.Dec();
             {{- end }}
@@ -157,8 +201,9 @@ namespace {{ .PackageName }}
 
         public void Add{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value)
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Inc(value);
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Inc(value);
             {{- else }}
             _{{ $m.FieldName }}.Inc(value);
             {{- end }}
@@ -167,8 +212,9 @@ namespace {{ .PackageName }}
 
         public void Sub{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value)
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Dec(value);
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Dec(value);
             {{- else }}
             _{{ $m.FieldName }}.Dec(value);
             {{- end }}
@@ -179,8 +225,9 @@ namespace {{ .PackageName }}
 
         public void Observe{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value)
         {
-            {{- if $m.Labels }}
-            _{{ $m.FieldName }}.WithLabels({{ $m.DotNetMethodArgs }}).Observe(value);
+            {{- if or $m.Labels $m.ConstLabels }}
+            {{- template "dotnetConstLabels" $m }}
+            _{{ $m.FieldName }}.WithLabels({{- template "dotnetWithLabels" $m }}).Observe(value);
             {{- else }}
             _{{ $m.FieldName }}.Observe(value);
             {{- end }}
