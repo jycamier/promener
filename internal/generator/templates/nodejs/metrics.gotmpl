@@ -106,7 +106,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   inc{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} });
+    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} });
     {{- else }}
     this._{{ $m.FieldName }}.inc();
     {{- end }}
@@ -114,7 +114,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   add{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} }, value);
+    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
     {{- else }}
     this._{{ $m.FieldName }}.inc(value);
     {{- end }}
@@ -124,7 +124,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   set{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.set({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} }, value);
+    this._{{ $m.FieldName }}.set({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
     {{- else }}
     this._{{ $m.FieldName }}.set(value);
     {{- end }}
@@ -132,7 +132,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   inc{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} });
+    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} });
     {{- else }}
     this._{{ $m.FieldName }}.inc();
     {{- end }}
@@ -140,7 +140,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   dec{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.dec({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} });
+    this._{{ $m.FieldName }}.dec({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} });
     {{- else }}
     this._{{ $m.FieldName }}.dec();
     {{- end }}
@@ -148,7 +148,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   add{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} }, value);
+    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
     {{- else }}
     this._{{ $m.FieldName }}.inc(value);
     {{- end }}
@@ -156,7 +156,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   sub{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.dec({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} }, value);
+    this._{{ $m.FieldName }}.dec({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
     {{- else }}
     this._{{ $m.FieldName }}.dec(value);
     {{- end }}
@@ -166,7 +166,7 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 
   observe{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
     {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.observe({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}{{- end }} }, value);
+    this._{{ $m.FieldName }}.observe({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
     {{- else }}
     this._{{ $m.FieldName }}.observe(value);
     {{- end }}
