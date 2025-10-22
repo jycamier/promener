@@ -14,35 +14,41 @@ type ConstLabels []ConstLabelDefinition
 
 // UnmarshalYAML implements custom YAML unmarshaling for ConstLabels
 // Supports both simple map[string]string and detailed map with descriptions
+// Uses yaml.Node to preserve key order from YAML file
 func (c *ConstLabels) UnmarshalYAML(value *yaml.Node) error {
-	// Try simple map[string]string first (backward compatibility)
-	var simpleMap map[string]string
-	if err := value.Decode(&simpleMap); err == nil {
-		*c = make(ConstLabels, 0, len(simpleMap))
-		for name, val := range simpleMap {
-			*c = append(*c, ConstLabelDefinition{
-				Name:  name,
-				Value: val,
-			})
-		}
+	if value.Kind != yaml.MappingNode {
 		return nil
 	}
 
-	// Try detailed format: map[string]{value: string, description: string}
-	var detailedMap map[string]struct {
-		Value       string `yaml:"value"`
-		Description string `yaml:"description"`
-	}
-	if err := value.Decode(&detailedMap); err == nil {
-		*c = make(ConstLabels, 0, len(detailedMap))
-		for name, def := range detailedMap {
+	*c = make(ConstLabels, 0, len(value.Content)/2)
+
+	for i := 0; i < len(value.Content); i += 2 {
+		keyNode := value.Content[i]
+		valueNode := value.Content[i+1]
+
+		name := keyNode.Value
+
+		// Try simple string value first
+		if valueNode.Kind == yaml.ScalarNode {
+			*c = append(*c, ConstLabelDefinition{
+				Name:  name,
+				Value: valueNode.Value,
+			})
+			continue
+		}
+
+		// Try detailed format with value and description
+		var detail struct {
+			Value       string `yaml:"value"`
+			Description string `yaml:"description"`
+		}
+		if err := valueNode.Decode(&detail); err == nil {
 			*c = append(*c, ConstLabelDefinition{
 				Name:        name,
-				Value:       def.Value,
-				Description: def.Description,
+				Value:       detail.Value,
+				Description: detail.Description,
 			})
 		}
-		return nil
 	}
 
 	return nil

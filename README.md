@@ -573,6 +573,9 @@ MIT
 
 - [ ] Standardize histogram buckets by business domain (e.g., HTTP latency, DB query duration, queue processing time)
 - [ ] Standardize summary objectives by business domain (e.g., background jobs, batch processing, async tasks)
+- [ ] Standardize metrics for common usacase
+- [ ] Config file for promener
+- [ ] A way to contribute standard / common metrics
 
 ## Contributing
 

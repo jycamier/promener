@@ -14,8 +14,8 @@ using System;
 
 {{- define "dotnetConstLabels" -}}
 {{- if .ConstLabels -}}
-{{- range $key, $val := .ConstLabels }}
-            var {{ $key }} = {{ toCode $val }};
+{{- range $key := .ConstLabelKeys }}
+            var {{ $key }} = {{ toCode (index $.ConstLabels $key) }};
 {{- end -}}
 {{- end -}}
 {{- end }}
@@ -90,7 +90,7 @@ namespace {{ .PackageName }}.Metrics
                 "{{ $m.Help }}"{{- if or $m.Labels $m.ConstLabels }},
                 new CounterConfiguration
                 {
-                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} }
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key := $m.ConstLabelKeys }}"{{ $key }}", {{ end -}} }
                 }{{- end }}
             );
 {{- else if eq $m.Type "gauge" }}
@@ -99,7 +99,7 @@ namespace {{ .PackageName }}.Metrics
                 "{{ $m.Help }}"{{- if or $m.Labels $m.ConstLabels }},
                 new GaugeConfiguration
                 {
-                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} }
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key := $m.ConstLabelKeys }}"{{ $key }}", {{ end -}} }
                 }{{- end }}
             );
 {{- else if eq $m.Type "histogram" }}
@@ -109,7 +109,7 @@ namespace {{ .PackageName }}.Metrics
                 new HistogramConfiguration
                 {
                     {{- if or $m.Labels $m.ConstLabels }}
-                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} },
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key := $m.ConstLabelKeys }}"{{ $key }}", {{ end -}} },
                     {{- end }}
                     {{- if $m.Buckets }}
                     Buckets = new[] { {{- range $i, $bucket := $m.Buckets }}{{if $i}}, {{end}}{{ $bucket }}d{{ end -}} }
@@ -123,7 +123,7 @@ namespace {{ .PackageName }}.Metrics
                 new SummaryConfiguration
                 {
                     {{- if or $m.Labels $m.ConstLabels }}
-                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key, $val := $m.ConstLabels }}"{{ $key }}", {{ end -}} },
+                    LabelNames = new[] { {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}"{{ $label }}"{{- end }}{{- if and $m.Labels $m.ConstLabels }}, {{ end }}{{- range $key := $m.ConstLabelKeys }}"{{ $key }}", {{ end -}} },
                     {{- end }}
                     {{- if $m.Objectives }}
                     Objectives = new[]

@@ -47,6 +47,7 @@ type MetricData struct {
 	Buckets            []float64
 	Objectives         map[float64]float64
 	ConstLabels        map[string]EnvVarValue
+	ConstLabelKeys     []string // Sorted keys for consistent iteration
 	FieldName          string
 	MethodName         string
 	MethodParams       string
@@ -55,8 +56,10 @@ type MetricData struct {
 	DotNetMethodArgs     string
 	DotNetConstLabelArgs string
 	NodeJSMethodParams   string
-	NodeJSType         string
-	FullName           string
+	NodeJSMethodArgs     string
+	NodeJSConstLabelArgs string
+	NodeJSType           string
+	FullName             string
 	VecType            string
 	OptsType           string
 	Constructor        string

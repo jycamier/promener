@@ -30,12 +30,22 @@ func (l *Labels) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	// Try to unmarshal as map[string]LabelDetail
-	var detailedLabels map[string]struct {
-		Description string `yaml:"description"`
-	}
-	if err := value.Decode(&detailedLabels); err == nil {
-		*l = make(Labels, 0, len(detailedLabels))
-		for name, detail := range detailedLabels {
+	// Use yaml.Node to preserve key order from YAML file
+	if value.Kind == yaml.MappingNode {
+		*l = make(Labels, 0, len(value.Content)/2)
+		for i := 0; i < len(value.Content); i += 2 {
+			keyNode := value.Content[i]
+			valueNode := value.Content[i+1]
+
+			name := keyNode.Value
+
+			var detail struct {
+				Description string `yaml:"description"`
+			}
+			if err := valueNode.Decode(&detail); err != nil {
+				return fmt.Errorf("invalid label definition for %s: %w", name, err)
+			}
+
 			*l = append(*l, LabelDefinition{
 				Name:        name,
 				Description: detail.Description,

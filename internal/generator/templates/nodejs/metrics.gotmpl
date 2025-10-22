@@ -9,6 +9,26 @@ import { Registry, Counter, Gauge, Histogram, Summary } from 'prom-client';
 {{- end }}
 {{- end }}
 
+{{- define "nodejsConstLabels" -}}
+{{- if .ConstLabels -}}
+{{- range $key := .ConstLabelKeys }}
+    const {{ $key }} = {{ toCode (index $.ConstLabels $key) }};
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{- define "nodejsLabelObject" -}}
+{{- if or .Labels .ConstLabels -}}
+{
+      {{- range $i, $label := .Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end -}}
+      {{- if and .Labels .ConstLabels }}, {{ end -}}
+      {{- range $key := .ConstLabelKeys }}{{ $key }}: {{ $key }}, {{- end }}
+    }
+{{- else -}}
+{}
+{{- end -}}
+{{- end }}
+
 {{- range $ns := .Namespaces }}
 {{- range $ss := $ns.Subsystems }}
 
@@ -105,16 +125,18 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 {{- if eq $m.Type "counter" }}
 
   inc{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} });
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.inc({{- template "nodejsLabelObject" $m }});
     {{- else }}
     this._{{ $m.FieldName }}.inc();
     {{- end }}
   }
 
   add{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.inc({{- template "nodejsLabelObject" $m }}, value);
     {{- else }}
     this._{{ $m.FieldName }}.inc(value);
     {{- end }}
@@ -123,40 +145,45 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 {{- if eq $m.Type "gauge" }}
 
   set{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.set({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.set({{- template "nodejsLabelObject" $m }}, value);
     {{- else }}
     this._{{ $m.FieldName }}.set(value);
     {{- end }}
   }
 
   inc{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} });
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.inc({{- template "nodejsLabelObject" $m }});
     {{- else }}
     this._{{ $m.FieldName }}.inc();
     {{- end }}
   }
 
   dec{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.dec({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} });
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.dec({{- template "nodejsLabelObject" $m }});
     {{- else }}
     this._{{ $m.FieldName }}.dec();
     {{- end }}
   }
 
   add{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.inc({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.inc({{- template "nodejsLabelObject" $m }}, value);
     {{- else }}
     this._{{ $m.FieldName }}.inc(value);
     {{- end }}
   }
 
   sub{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.dec({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.dec({{- template "nodejsLabelObject" $m }}, value);
     {{- else }}
     this._{{ $m.FieldName }}.dec(value);
     {{- end }}
@@ -165,8 +192,9 @@ export class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl implements I{{ $ns.Name }}{
 {{- if or (eq $m.Type "histogram") (eq $m.Type "summary") }}
 
   observe{{ $m.MethodName }}({{ $m.NodeJSMethodParams }}{{ if $m.Labels }}, {{ end }}value: number): void {
-    {{- if $m.Labels }}
-    this._{{ $m.FieldName }}.observe({ {{- range $i, $label := $m.Labels }}{{if $i}}, {{end}}{{ $label }}: {{ $label | toLowerCamelCase }}{{- end }} }, value);
+    {{- if or $m.Labels $m.ConstLabels }}
+    {{- template "nodejsConstLabels" $m }}
+    this._{{ $m.FieldName }}.observe({{- template "nodejsLabelObject" $m }}, value);
     {{- else }}
     this._{{ $m.FieldName }}.observe(value);
     {{- end }}

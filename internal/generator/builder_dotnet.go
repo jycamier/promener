@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/jycamier/promener/internal/domain"
@@ -52,11 +53,13 @@ func (b *DotNetTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 				metric.DotNetMethodArgs = strings.Join(args, ", ")
 
 				// Build const label variable names for WithLabels calls
-				var constLabelVars []string
+				// Sort keys alphabetically to ensure consistent order
+				var constLabelKeys []string
 				for key := range metric.ConstLabels {
-					constLabelVars = append(constLabelVars, key)
+					constLabelKeys = append(constLabelKeys, key)
 				}
-				metric.DotNetConstLabelArgs = strings.Join(constLabelVars, ", ")
+				sort.Strings(constLabelKeys)
+				metric.DotNetConstLabelArgs = strings.Join(constLabelKeys, ", ")
 			}
 		}
 	}

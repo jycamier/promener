@@ -1,6 +1,10 @@
 package generator
 
-import "github.com/jycamier/promener/internal/domain"
+import (
+	"sort"
+
+	"github.com/jycamier/promener/internal/domain"
+)
 
 // TemplateDataBuilder transforms a domain specification into template data
 type TemplateDataBuilder interface {
@@ -33,20 +37,30 @@ func (b *CommonTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 				nsMap[ns] = make(map[string][]MetricData)
 			}
 
+			constLabelsMap := ParseConstLabelsMap(metric.ConstLabels.ToMap())
+
+			// Extract and sort const label keys for consistent iteration
+			constLabelKeys := make([]string, 0, len(constLabelsMap))
+			for key := range constLabelsMap {
+				constLabelKeys = append(constLabelKeys, key)
+			}
+			sort.Strings(constLabelKeys)
+
 			nsMap[ns][ss] = append(nsMap[ns][ss], MetricData{
-				Name:        metric.Name,
-				Namespace:   metric.Namespace,
-				Subsystem:   metric.Subsystem,
-				Type:        string(metric.Type),
-				Help:        metric.Help,
-				Labels:      metric.GetLabelNames(),
-				Buckets:     metric.Buckets,
-				Objectives:  metric.Objectives,
-				ConstLabels: ParseConstLabelsMap(metric.ConstLabels.ToMap()),
-				FieldName:   toLowerCamelCase(metric.Name),
-				MethodName:  toCamelCase(metric.Name),
-				FullName:    metric.FullName(),
-				Deprecated:  metric.Deprecated,
+				Name:           metric.Name,
+				Namespace:      metric.Namespace,
+				Subsystem:      metric.Subsystem,
+				Type:           string(metric.Type),
+				Help:           metric.Help,
+				Labels:         metric.GetLabelNames(),
+				Buckets:        metric.Buckets,
+				Objectives:     metric.Objectives,
+				ConstLabels:    constLabelsMap,
+				ConstLabelKeys: constLabelKeys,
+				FieldName:      toLowerCamelCase(metric.Name),
+				MethodName:     toCamelCase(metric.Name),
+				FullName:       metric.FullName(),
+				Deprecated:     metric.Deprecated,
 			})
 		}
 	}
