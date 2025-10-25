@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/jycamier/promener/pkg/docs"
@@ -13,6 +14,20 @@ var (
 	htmlOutputFile string
 	htmlWatch      time.Duration
 )
+
+// isURI returns true if the input string is a valid absolute URI
+func isURI(input string) bool {
+	u, err := url.Parse(input)
+	return err == nil && u.IsAbs()
+}
+
+// loadSpecFromInput loads a spec from either a file path or URI
+func loadSpecFromInput(input string) (*docs.Specification, error) {
+	if isURI(input) {
+		return docs.LoadSpecFromURL(input)
+	}
+	return docs.LoadSpec(input)
+}
 
 // htmlCmd represents the html command
 var htmlCmd = &cobra.Command{
@@ -28,12 +43,20 @@ The HTML documentation includes:
 - Alertmanager alert rule examples
 - Detailed label descriptions
 
+Input sources can be local files or URIs (http/https).
+
 Examples:
   # Single file
   promener html -i metrics.yaml -o docs/metrics.html
 
+  # From URI
+  promener html -i https://example.com/metrics.yaml -o docs/metrics.html
+
   # Multiple files (aggregated into one HTML)
   promener html -i api.yaml -i users.yaml -i orders.yaml -o docs/metrics.html
+
+  # Mix of files and URIs
+  promener html -i metrics.yaml -i https://example.com/remote.yaml -o docs/metrics.html
 
   # With watch mode
   promener html -i metrics.yaml -o docs/metrics.html --watch 5s
@@ -48,8 +71,8 @@ Examples:
 			var builder docs.Builder
 
 			if len(htmlInputFiles) == 1 {
-				// Single file: use simple generation
-				spec, err := docs.LoadSpec(htmlInputFiles[0])
+				// Single file or URI: use simple generation
+				spec, err := loadSpecFromInput(htmlInputFiles[0])
 				if err != nil {
 					return fmt.Errorf("failed to load spec: %w", err)
 				}
@@ -62,7 +85,7 @@ Examples:
 				builder = docs.NewHTMLBuilder("Aggregated Metrics", "1.0.0")
 
 				for _, inputFile := range htmlInputFiles {
-					spec, err := docs.LoadSpec(inputFile)
+					spec, err := loadSpecFromInput(inputFile)
 					if err != nil {
 						return fmt.Errorf("failed to load spec %s: %w", inputFile, err)
 					}
@@ -105,7 +128,7 @@ Examples:
 func init() {
 	rootCmd.AddCommand(htmlCmd)
 
-	htmlCmd.Flags().StringSliceVarP(&htmlInputFiles, "input", "i", []string{}, "Input YAML specification file(s) - can be specified multiple times (required)")
+	htmlCmd.Flags().StringSliceVarP(&htmlInputFiles, "input", "i", []string{}, "Input YAML specification (file path or URI) - can be specified multiple times (required)")
 	htmlCmd.Flags().StringVarP(&htmlOutputFile, "output", "o", "", "Output HTML file (required)")
 	htmlCmd.Flags().DurationVar(&htmlWatch, "watch", 0, "Watch for changes and regenerate (e.g., 5s, 1m)")
 
