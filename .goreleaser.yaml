@@ -26,7 +26,6 @@ builds:
 
 archives:
   - id: promener
-    format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -34,9 +33,6 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - LICENSE
       - README.md
@@ -64,17 +60,21 @@ release:
   name_template: "{{.ProjectName}}-v{{.Version}}"
 
 kos:
-  - repository: ghcr.io/jycamier/promener
+  - id: promener
+    repositories:
+      - ghcr.io/jycamier/promener
     tags:
       - '{{.Version}}'
       - latest
     bare: true
     preserve_import_paths: false
+    base_import_paths: true
+    main: .
     platforms:
       - linux/amd64
       - linux/arm64
 
-brews:
+homebrew_casks:
   - name: promener
     repository:
       owner: jycamier
@@ -83,31 +83,27 @@ brews:
     homepage: https://github.com/jycamier/promener
     description: Generates structured Prometheus metrics code with named parameters and interactive HTML documentation from YAML specifications
     license: Apache-2.0
-    install: |
-      bin.install "promener"
-    test: |
-      system "#{bin}/promener version"
     commit_author:
       name: goreleaserbot
       email: goreleaser@users.noreply.github.com
 
-chocolateys:
-  - name: promener
-    owners: jycamier
-    authors: Jean-Yves CAMIER
-    project_url: https://github.com/jycamier/promener
-    url_template: "https://github.com/jycamier/promener/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    license_url: https://github.com/jycamier/promener/blob/main/LICENSE
-    require_license_acceptance: false
-    project_source_url: https://github.com/jycamier/promener
-    docs_url: https://github.com/jycamier/promener/blob/main/README.md
-    bug_tracker_url: https://github.com/jycamier/promener/issues
-    tags: "prometheus metrics code-generator observability monitoring"
-    summary: Prometheus metrics code generator
-    description: |
-      Promener generates type-safe, organized code for Prometheus metrics from YAML specifications.
-      Supports all metric types, constant labels, environment variables, and HTML documentation generation.
-    release_notes: "https://github.com/jycamier/promener/releases/tag/{{ .Tag }}"
-    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-    source_repo: "https://push.chocolatey.org/"
-    skip_publish: false
+#chocolateys:
+#  - name: promener
+#    owners: jycamier
+#    authors: Jean-Yves CAMIER
+#    project_url: https://github.com/jycamier/promener
+#    url_template: "https://github.com/jycamier/promener/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+#    license_url: https://github.com/jycamier/promener/blob/main/LICENSE
+#    require_license_acceptance: false
+#    project_source_url: https://github.com/jycamier/promener
+#    docs_url: https://github.com/jycamier/promener/blob/main/README.md
+#    bug_tracker_url: https://github.com/jycamier/promener/issues
+#    tags: "prometheus metrics code-generator observability monitoring"
+#    summary: Prometheus metrics code generator
+#    description: |
+#      Promener generates type-safe, organized code for Prometheus metrics from YAML specifications.
+#      Supports all metric types, constant labels, environment variables, and HTML documentation generation.
+#    release_notes: "https://github.com/jycamier/promener/releases/tag/{{ .Tag }}"
+#    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+#    source_repo: "https://push.chocolatey.org/"
+#    skip_publish: false
