@@ -1,6 +1,10 @@
-# Promener
+<div style="display: flex; justify-content: center;">
+  <img src="docs/img/logo.png" alt="small" width="300"/>
+</div>
 
 **Promener** (from French "promener" - to walk through/explore) addresses a critical gap in observability: **the lack of structured, maintained documentation for Prometheus metrics**.
+
+<img src="docs/img/promener.png" alt="small" width="300"/>
 
 ## The Problem
 
