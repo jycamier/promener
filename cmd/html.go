@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/url"
+	"os/signal"
 	"time"
 
+	"github.com/jycamier/promener/internal/signals"
 	"github.com/jycamier/promener/pkg/docs"
 	"github.com/spf13/cobra"
 )
@@ -109,15 +112,27 @@ Examples:
 		// Watch mode
 		if htmlWatch > 0 {
 			fmt.Printf("👀 Watching for changes (every %s)... Press Ctrl+C to stop\n", htmlWatch)
+
+			// Setup context with signal handling for graceful shutdown
+			// Uses platform-specific signals (Unix: SIGINT+SIGTERM, Windows: only SIGINT)
+			ctx, stop := signal.NotifyContext(context.Background(), signals.Shutdown()...)
+			defer stop()
+
 			ticker := time.NewTicker(htmlWatch)
 			defer ticker.Stop()
 
-			for range ticker.C {
-				if err := generateHTML(); err != nil {
-					fmt.Printf("⚠ Error regenerating HTML: %v\n", err)
-					continue
+			for {
+				select {
+				case <-ctx.Done():
+					fmt.Printf("\n✓ Received shutdown signal, stopping watch mode...\n")
+					return nil
+				case <-ticker.C:
+					if err := generateHTML(); err != nil {
+						fmt.Printf("⚠ Error regenerating HTML: %v\n", err)
+						continue
+					}
+					fmt.Printf("✓ Regenerated HTML documentation: %s (%s)\n", htmlOutputFile, time.Now().Format("15:04:05"))
 				}
-				fmt.Printf("✓ Regenerated HTML documentation: %s (%s)\n", htmlOutputFile, time.Now().Format("15:04:05"))
 			}
 		}
 
