@@ -60,6 +60,19 @@ release:
     name: promener
   draft: false
   prerelease: auto
+  mode: replace
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+
+kos:
+  - repository: ghcr.io/jycamier/promener
+    tags:
+      - '{{.Version}}'
+      - latest
+    bare: true
+    preserve_import_paths: false
+    platforms:
+      - linux/amd64
+      - linux/arm64
 
 brews:
   - name: promener
