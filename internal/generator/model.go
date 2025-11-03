@@ -38,20 +38,21 @@ type Subsystem struct {
 
 // MetricData contains all information needed to generate a metric
 type MetricData struct {
-	Name               string
-	Namespace          string
-	Subsystem          string
-	Type               string
-	Help               string
-	Labels             []string
-	Buckets            []float64
-	Objectives         map[float64]float64
-	ConstLabels        map[string]EnvVarValue
-	ConstLabelKeys     []string // Sorted keys for consistent iteration
-	FieldName          string
-	MethodName         string
-	MethodParams       string
-	MethodArgs         string
+	Name                 string
+	Namespace            string
+	Subsystem            string
+	Type                 string
+	Help                 string
+	Labels               []string
+	LabelDefinitions     []domain.LabelDefinition // Full label definitions with validations
+	Buckets              []float64
+	Objectives           map[float64]float64
+	ConstLabels          map[string]EnvVarValue
+	ConstLabelKeys       []string // Sorted keys for consistent iteration
+	FieldName            string
+	MethodName           string
+	MethodParams         string
+	MethodArgs           string
 	DotNetMethodParams   string
 	DotNetMethodArgs     string
 	DotNetConstLabelArgs string
@@ -60,12 +61,12 @@ type MetricData struct {
 	NodeJSConstLabelArgs string
 	NodeJSType           string
 	FullName             string
-	VecType            string
-	OptsType           string
-	Constructor        string
-	HasLabels          bool   // true if the metric has labels (uses Vec types)
-	SimpleType         string // The simple type without Vec (Counter, Gauge, etc.)
-	Deprecated         *domain.Deprecated
+	VecType              string
+	OptsType             string
+	Constructor          string
+	HasLabels            bool   // true if the metric has labels (uses Vec types)
+	SimpleType           string // The simple type without Vec (Counter, Gauge, etc.)
+	Deprecated           *domain.Deprecated
 }
 
 // toCamelCase converts a snake_case string to CamelCase

@@ -28,6 +28,9 @@ func NewGenerator(fs embed.FS, pattern string, builder TemplateDataBuilder, envT
 				return strings.ToLower(s)
 			},
 			"toLowerCamelCase": toLowerCamelCase,
+			"list": func(args ...interface{}) []interface{} {
+				return args
+			},
 		}).ParseFS(fs, pattern)
 	if err != nil {
 		return nil, err

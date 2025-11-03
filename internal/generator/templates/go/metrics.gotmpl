@@ -2,11 +2,14 @@
 package {{ .PackageName }}
 
 import (
+	"fmt"
 	{{- if .NeedsOsImport }}
 	"os"
 	{{- end }}
 	"sync"
 
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -16,10 +19,84 @@ import (
 {{- end }}
 {{- end }}
 
+{{- define "validateLabels" }}
+{{- $ns := index . 0 }}
+{{- $ss := index . 1 }}
+{{- $m := index . 2 }}
+{{- range $label := $m.LabelDefinitions }}
+{{- range $validation := $label.Validations }}
+	if err := validateLabel("{{ $ns.Name }}_{{ $ss.Name }}_{{ $m.MethodName }}_{{ $label.Name }}_{{ $validation }}", "{{ $label.Name }}", {{ $label.Name | toLowerCamelCase }}); err != nil {
+		panic(err)
+	}
+{{- end }}
+{{- end }}
+{{- end }}
+
 var (
 	once sync.Once
 	registry *MetricsRegistry
+	celEnv *cel.Env
+	celPrograms = make(map[string]cel.Program)
 )
+
+func init() {
+	var err error
+	celEnv, err = cel.NewEnv(cel.Variable("value", cel.StringType))
+	if err != nil {
+		panic(fmt.Sprintf("failed to create CEL environment: %v", err))
+	}
+
+	// Compile all validation expressions
+	validations := map[string]string{
+		{{- range $ns := .Namespaces }}
+		{{- range $ss := $ns.Subsystems }}
+		{{- range $m := $ss.Metrics }}
+		{{- range $label := $m.LabelDefinitions }}
+		{{- range $validation := $label.Validations }}
+		"{{ $ns.Name }}_{{ $ss.Name }}_{{ $m.MethodName }}_{{ $label.Name }}_{{ $validation }}": "{{ $validation }}",
+		{{- end }}
+		{{- end }}
+		{{- end }}
+		{{- end }}
+		{{- end }}
+	}
+
+	for key, expr := range validations {
+		ast, issues := celEnv.Compile(expr)
+		if issues != nil && issues.Err() != nil {
+			panic(fmt.Sprintf("failed to compile CEL expression %q: %v", expr, issues.Err()))
+		}
+		program, err := celEnv.Program(ast)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create CEL program for %q: %v", expr, err))
+		}
+		celPrograms[key] = program
+	}
+}
+
+// validateLabel runs a CEL validation on a label value
+func validateLabel(programKey, labelName, value string) error {
+	program, exists := celPrograms[programKey]
+	if !exists {
+		return nil // No validation for this label
+	}
+
+	result, _, err := program.Eval(map[string]interface{}{"value": value})
+	if err != nil {
+		return fmt.Errorf("label %q validation error: %w", labelName, err)
+	}
+
+	boolResult, ok := result.(types.Bool)
+	if !ok {
+		return fmt.Errorf("label %q validation did not return boolean", labelName)
+	}
+
+	if boolResult == types.False {
+		return fmt.Errorf("label %q value %q failed validation", labelName, value)
+	}
+
+	return nil
+}
 
 // MetricsRegistry is the main registry containing all metrics organized by namespace
 type MetricsRegistry struct {
@@ -139,6 +216,7 @@ func Default() *MetricsRegistry {
 // Inc{{ $m.MethodName }} increments the {{ $m.FullName }} counter
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Inc{{ $m.MethodName }}({{ $m.MethodParams }}) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Inc()
 	{{- else }}
 	m.{{ $m.FieldName }}.Inc()
@@ -149,6 +227,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Inc{{ $m.MethodName }}({{ $m.M
 // Add{{ $m.MethodName }} adds the given value to the {{ $m.FullName }} counter
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Add{{ $m.MethodName }}({{- if $m.MethodParams }}{{ $m.MethodParams }}, {{ end }}value float64) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Add(value)
 	{{- else }}
 	m.{{ $m.FieldName }}.Add(value)
@@ -159,6 +238,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Add{{ $m.MethodName }}({{- if 
 // Set{{ $m.MethodName }} sets the {{ $m.FullName }} gauge to the given value
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Set{{ $m.MethodName }}({{- if $m.MethodParams }}{{ $m.MethodParams }}, {{ end }}value float64) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Set(value)
 	{{- else }}
 	m.{{ $m.FieldName }}.Set(value)
@@ -169,6 +249,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Set{{ $m.MethodName }}({{- if 
 // Inc{{ $m.MethodName }} increments the {{ $m.FullName }} gauge by 1
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Inc{{ $m.MethodName }}({{ $m.MethodParams }}) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Inc()
 	{{- else }}
 	m.{{ $m.FieldName }}.Inc()
@@ -179,6 +260,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Inc{{ $m.MethodName }}({{ $m.M
 // Dec{{ $m.MethodName }} decrements the {{ $m.FullName }} gauge by 1
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Dec{{ $m.MethodName }}({{ $m.MethodParams }}) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Dec()
 	{{- else }}
 	m.{{ $m.FieldName }}.Dec()
@@ -189,6 +271,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Dec{{ $m.MethodName }}({{ $m.M
 // Add{{ $m.MethodName }} adds the given value to the {{ $m.FullName }} gauge
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Add{{ $m.MethodName }}({{- if $m.MethodParams }}{{ $m.MethodParams }}, {{ end }}value float64) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Add(value)
 	{{- else }}
 	m.{{ $m.FieldName }}.Add(value)
@@ -199,6 +282,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Add{{ $m.MethodName }}({{- if 
 // Sub{{ $m.MethodName }} subtracts the given value from the {{ $m.FullName }} gauge
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Sub{{ $m.MethodName }}({{- if $m.MethodParams }}{{ $m.MethodParams }}, {{ end }}value float64) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Sub(value)
 	{{- else }}
 	m.{{ $m.FieldName }}.Sub(value)
@@ -209,6 +293,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Sub{{ $m.MethodName }}({{- if 
 // Observe{{ $m.MethodName }} observes a value for the {{ $m.FullName }} histogram
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Observe{{ $m.MethodName }}({{- if $m.MethodParams }}{{ $m.MethodParams }}, {{ end }}value float64) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Observe(value)
 	{{- else }}
 	m.{{ $m.FieldName }}.Observe(value)
@@ -219,6 +304,7 @@ func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Observe{{ $m.MethodName }}({{-
 // Observe{{ $m.MethodName }} observes a value for the {{ $m.FullName }} summary
 func (m *{{ $ns.Name }}{{ $ss.Name }}MetricsImpl) Observe{{ $m.MethodName }}({{- if $m.MethodParams }}{{ $m.MethodParams }}, {{ end }}value float64) {
 	{{- if $m.HasLabels }}
+	{{- template "validateLabels" (list $ns $ss $m) }}
 	m.{{ $m.FieldName }}.WithLabelValues({{ $m.MethodArgs }}).Observe(value)
 	{{- else }}
 	m.{{ $m.FieldName }}.Observe(value)

@@ -47,20 +47,21 @@ func (b *CommonTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 			sort.Strings(constLabelKeys)
 
 			nsMap[ns][ss] = append(nsMap[ns][ss], MetricData{
-				Name:           metric.Name,
-				Namespace:      metric.Namespace,
-				Subsystem:      metric.Subsystem,
-				Type:           string(metric.Type),
-				Help:           metric.Help,
-				Labels:         metric.GetLabelNames(),
-				Buckets:        metric.Buckets,
-				Objectives:     metric.Objectives,
-				ConstLabels:    constLabelsMap,
-				ConstLabelKeys: constLabelKeys,
-				FieldName:      toLowerCamelCase(metric.Name),
-				MethodName:     toCamelCase(metric.Name),
-				FullName:       metric.FullName(),
-				Deprecated:     metric.Deprecated,
+				Name:             metric.Name,
+				Namespace:        metric.Namespace,
+				Subsystem:        metric.Subsystem,
+				Type:             string(metric.Type),
+				Help:             metric.Help,
+				Labels:           metric.GetLabelNames(),
+				LabelDefinitions: metric.Labels,
+				Buckets:          metric.Buckets,
+				Objectives:       metric.Objectives,
+				ConstLabels:      constLabelsMap,
+				ConstLabelKeys:   constLabelKeys,
+				FieldName:        toLowerCamelCase(metric.Name),
+				MethodName:       toCamelCase(metric.Name),
+				FullName:         metric.FullName(),
+				Deprecated:       metric.Deprecated,
 			})
 		}
 	}

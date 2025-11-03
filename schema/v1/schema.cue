@@ -34,6 +34,7 @@ package v1
 	help:       string
 	labels?: [string]: {
 		description: string
+		validations?: [...string]
 	}
 	constLabels?: [string]: {
 		value:       string

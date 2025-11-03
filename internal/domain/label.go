@@ -6,10 +6,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LabelDefinition represents a label with optional description
+// LabelDefinition represents a label with optional description and validations
 type LabelDefinition struct {
-	Name        string `yaml:"name,omitempty"`
-	Description string `yaml:"description,omitempty"`
+	Name        string   `yaml:"name,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+	Validations []string `yaml:"validations,omitempty"`
 }
 
 // Labels can be either a simple array of strings or a map with descriptions
@@ -40,7 +41,8 @@ func (l *Labels) UnmarshalYAML(value *yaml.Node) error {
 			name := keyNode.Value
 
 			var detail struct {
-				Description string `yaml:"description"`
+				Description string   `yaml:"description"`
+				Validations []string `yaml:"validations,omitempty"`
 			}
 			if err := valueNode.Decode(&detail); err != nil {
 				return fmt.Errorf("invalid label definition for %s: %w", name, err)
@@ -49,6 +51,7 @@ func (l *Labels) UnmarshalYAML(value *yaml.Node) error {
 			*l = append(*l, LabelDefinition{
 				Name:        name,
 				Description: detail.Description,
+				Validations: detail.Validations,
 			})
 		}
 		return nil
