@@ -18,32 +18,48 @@ Most teams struggle with metric observability:
 
 Promener takes an **opinionated, Domain-Driven Design (DDD) approach** to metrics:
 
-1. **Documentation-first**: Define metrics in a structured YAML specification where documentation is required, not optional
-2. **Single source of truth**: Your YAML spec becomes the living documentation that's always in sync with code
+1. **Documentation-first**: Define metrics in a structured CUE specification where documentation is required, not optional
+2. **Single source of truth**: Your CUE spec becomes the living documentation that's always in sync with code
 3. **Domain organization**: Metrics are organized by namespace and subsystem, reflecting your business domains
 4. **Generate everything**: From one spec, generate both production code AND beautiful, searchable HTML documentation
 
-```yaml
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total number of HTTP requests"  # Documentation required!
-    labels:
-      method:
-        description: "HTTP method (GET, POST, etc.)"  # Label docs required!
-    examples:
-      promql:
-        - query: 'rate(http_server_requests_total[5m])'
-          description: "Request rate per second"
-      alerts:
-        - name: "HighErrorRate"
-          expr: 'rate(http_server_requests_total{status=~"5.."}[5m]) > 0.1'
+```cue
+package main
+
+version: "1.0.0"
+info: {
+    title:   "My Application Metrics"
+    version: "1.0.0"
+}
+services: {
+    default: {
+        info: {
+            title:   "Default Service"
+            version: "1.0.0"
+        }
+        metrics: {
+            http_requests_total: {
+                namespace: "http"
+                subsystem: "server"
+                type:      "counter"
+                help:      "Total HTTP requests"
+                labels: {
+                    method: {
+                        description: "HTTP method"
+                        validations: [
+                            "value in ['GET', 'POST', 'PUT', 'DELETE']",
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}
 ```
 
 From this spec, Promener generates:
 - **Type-safe code** (Go, .NET C#, Node.js TypeScript) with organized facades
+- **Runtime label validation** using CEL (Common Expression Language)
 - **Interactive HTML documentation** with searchable metrics, PromQL examples, and alert rules
 - **Dependency injection modules** for easy integration
 - **Thread-safe initialization** with proper registry management
@@ -52,18 +68,21 @@ From this spec, Promener generates:
 
 ## Features
 
-- 📝 **YAML-based specifications** - Define metrics using an OpenAPI-inspired format
+- 📝 **CUE-based specifications** - Define metrics using CUE language with built-in validation
+- ✅ **Schema validation** - Embedded CUE schemas validate your specifications before generation
+- 🔍 **Vet command** - Validate metrics specifications without generating code
+- 🛡️ **Label validation (currently only supported for **GO** code generate)** - Label validation using CEL (Common Expression Language)
 - 🌐 **Multi-language support** - Generate code for **Go**, **.NET (C#)**, and **Node.js (TypeScript)**
 - 🏗️ **Organized structure** - Metrics grouped by namespace and subsystem
 - 🔒 **Type-safe facades** - Generated methods with typed parameters
 - 💉 **Dependency injection ready** - Supports Uber FX (Go) and Microsoft.Extensions.DependencyInjection (.NET)
-- 🔄 **Thread-safe initialization** - Uses `sync.Once` for safe concurrent access
 - 📊 **All metric types** - Counter, Gauge, Histogram, and Summary
 - 🏷️ **Constant labels** - Support for static and environment variable-based labels
 - ⚠️ **Metric deprecation** - Mark metrics as deprecated with migration guidance
 - 🧪 **Mockable interfaces** - Generated interfaces for easy testing
 - 📚 **Documentation generation** - Generate beautiful HTML documentation with examples
 - 🔍 **Interactive docs** - Search, filter, dark mode, and copy-to-clipboard for queries
+- 📦 **CUE module support** - Use CUE modules with external imports
 
 ## Installation
 
@@ -92,13 +111,13 @@ go get github.com/jycamier/promener@latest
 Then add a `//go:generate` directive to your code:
 
 ```go
-//go:generate go run github.com/jycamier/promener generate go -i metrics.yaml -o metrics/ --di --fx
+//go:generate go run github.com/jycamier/promener generate go -i metrics.cue -o metrics/ --di --fx
 ```
 
 Or if you prefer using the installed tool:
 
 ```go
-//go:generate promener generate go -i metrics.yaml -o metrics/ --di --fx
+//go:generate promener generate go -i metrics.cue -o metrics/ --di --fx
 ```
 
 Then run:
@@ -109,73 +128,116 @@ go generate ./...
 
 ## Quick Start
 
-### 1. Define your metrics in YAML
+### 1. Define your metrics in CUE
 
-Create a `metrics.yaml` file:
+Create a `metrics.cue` file:
 
-```yaml
-version: "1.0"
-info:
-  title: "My Application Metrics"
-  version: "1.0.0"
-  package: "metrics"
+```cue
+package main
 
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total number of HTTP requests"
-    labels:
-      - method
-      - status
-      - endpoint
-
-  request_duration_seconds:
-    namespace: http
-    subsystem: server
-    type: histogram
-    help: "HTTP request duration in seconds"
-    labels:
-      - method
-      - endpoint
-    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
-    constLabels:
-      environment: "${ENVIRONMENT:production}"
-      region: "${REGION}"
-      version: "1.0.0"
+version: "1.0.0"
+info: {
+    title:   "My Application Metrics"
+    version: "1.0.0"
+    package: "metrics"
+}
+services: {
+    default: {
+        info: {
+            title:   "Default Service"
+            version: "1.0.0"
+        }
+        metrics: {
+            http_requests_total: {
+                namespace: "http"
+                subsystem: "server"
+                type:      "counter"
+                help:      "Total number of HTTP requests"
+                labels: {
+                    method: {
+                        description: "HTTP method"
+                        validations: [
+                            "value in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']",
+                        ]
+                    }
+                    status: {
+                        description: "HTTP status code"
+                        validations: [
+                            "value.matches('^[1-5][0-9]{2}$')",
+                        ]
+                    }
+                }
+            }
+            http_request_duration_seconds: {
+                namespace: "http"
+                subsystem: "server"
+                type:      "histogram"
+                help:      "HTTP request duration in seconds"
+                labels: {
+                    method: {
+                        description: "HTTP method"
+                    }
+                    endpoint: {
+                        description: "API endpoint"
+                    }
+                }
+                buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+                constLabels: {
+                    environment: {
+                        value:       "${ENVIRONMENT:production}"
+                        description: "Deployment environment"
+                    }
+                    version: {
+                        value:       "1.0.0"
+                        description: "Application version"
+                    }
+                }
+            }
+        }
+    }
+}
 ```
+
+### 1.1 Validate your specification
+
+Before generating code, validate your CUE specification:
+
+```bash
+promener vet metrics.cue
+```
+
+This validates your specification against the embedded CUE schema and checks for errors. Use `--format json` for machine-readable output in CI/CD pipelines.
 
 ### 2. Generate code for your target language
 
 #### For Go:
 
 ```bash
-promener generate go -i metrics.yaml -o ./metrics
+promener generate go -i metrics.cue -o ./metrics
 ```
 
 With Uber FX dependency injection:
 
 ```bash
-promener generate go -i metrics.yaml -o ./metrics --di --fx
+promener generate go -i metrics.cue -o ./metrics --di --fx
 ```
 
 #### For .NET (C#):
 
 ```bash
-promener generate dotnet -i metrics.yaml -o ./Metrics
+promener generate dotnet -i metrics.cue -o ./Metrics
 ```
 
 With Dependency Injection extensions:
 
 ```bash
-promener generate dotnet -i metrics.yaml -o ./Metrics --di
+promener generate dotnet -i metrics.cue -o ./Metrics --di
 ```
 
 #### For Node.js (TypeScript):
 
 ```bash
-promener generate nodejs -i metrics.yaml -o ./metrics
+promener generate nodejs -i metrics.cue -o ./metrics
 ```
 
 **Common options:**
@@ -284,11 +346,17 @@ app.Run();
 
 ## Documentation
 
+- [CUE Specification](docs/cue-specification.md) - Complete CUE format reference and schema documentation
+- [Label Validation](docs/label-validation.md) - Using CEL for runtime label validation
+- [Vet Command](docs/vet-command.md) - Validating specifications before code generation
 - [HTTP Server Integration](docs/http-integration.md) - How to integrate metrics with HTTP servers
 - [Constant Labels](docs/constant-labels.md) - Using static and environment-based constant labels
 - [Metric Deprecation](docs/metric-deprecation.md) - How to deprecate metrics and guide migrations
-- [YAML Specification](docs/yaml-specification.md) - Complete YAML format reference
-- [Generated Code Structure](docs/generated-code.md) - Understanding the generated code
+- [GitHub Pages](docs/github-pages.md) - Live documentation example and deployment guide
+
+### Live Example
+
+See a live example of generated HTML documentation at: **https://jycamier.github.io/promener/**
 
 ## Generated Code Structure
 
@@ -325,20 +393,33 @@ metrics.Db.Postgres.ObserveQueryDurationSeconds("SELECT", "users", 0.002)
 
 Constant labels are automatically attached to all observations of a metric. They're useful for static metadata like environment, version, or region:
 
-```yaml
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total HTTP requests"
-    labels:
-      - method
-      - status
-    constLabels:
-      version: "1.0.0"                      # Static value
-      environment: "${ENVIRONMENT}"          # From env var
-      region: "${REGION:eu-west-1}"         # With default value
+```cue
+metrics: {
+    http_requests_total: {
+        namespace: "http"
+        subsystem: "server"
+        type:      "counter"
+        help:      "Total HTTP requests"
+        labels: {
+            method: {description: "HTTP method"}
+            status: {description: "HTTP status"}
+        }
+        constLabels: {
+            version: {
+                value:       "1.0.0"
+                description: "Static version"
+            }
+            environment: {
+                value:       "${ENVIRONMENT}"
+                description: "From env var"
+            }
+            region: {
+                value:       "${REGION:eu-west-1}"
+                description: "With default value"
+            }
+        }
+    }
+}
 ```
 
 The generated code automatically resolves environment variables at initialization:
@@ -377,6 +458,21 @@ Each subsystem is provided as an interface for easy mocking in tests.
 
 ## Command Line Options
 
+### Vet Command
+
+Validate CUE specifications without generating code:
+
+```
+promener vet <file> [flags]
+
+Flags:
+  --format string   Output format: text or json (default "text")
+
+Examples:
+  promener vet metrics.cue                    # Human-readable output
+  promener vet metrics.cue --format json      # Machine-readable for CI/CD
+```
+
 ### Generate Command
 
 The `generate` command now uses language-specific subcommands:
@@ -390,7 +486,7 @@ Subcommands:
   nodejs    Generate Node.js (TypeScript) code for Prometheus metrics
 
 Global Flags:
-  -i, --input string    Input YAML specification file (required)
+  -i, --input string    Input CUE specification file (required)
   -o, --output string   Output directory (required)
 ```
 
@@ -408,13 +504,13 @@ Flags:
 Examples:
 ```bash
 # Generate Go code
-promener generate go -i metrics.yaml -o ./metrics
+promener generate go -i metrics.cue -o ./metrics
 
 # Generate Go code with Uber FX DI
-promener generate go -i metrics.yaml -o ./metrics --di --fx
+promener generate go -i metrics.cue -o ./metrics --di --fx
 
 # Override package name
-promener generate go -i metrics.yaml -o ./metrics -p mymetrics
+promener generate go -i metrics.cue -o ./metrics -p mymetrics
 ```
 
 #### .NET Subcommand
@@ -430,13 +526,13 @@ Flags:
 Examples:
 ```bash
 # Generate .NET code
-promener generate dotnet -i metrics.yaml -o ./Metrics
+promener generate dotnet -i metrics.cue -o ./Metrics
 
 # Generate .NET code with DI extensions
-promener generate dotnet -i metrics.yaml -o ./Metrics --di
+promener generate dotnet -i metrics.cue -o ./Metrics --di
 
 # Override namespace
-promener generate dotnet -i metrics.yaml -o ./Metrics -p MyApp.Metrics
+promener generate dotnet -i metrics.cue -o ./Metrics -p MyApp.Metrics
 ```
 
 #### Node.js Subcommand
@@ -451,10 +547,10 @@ Flags:
 Examples:
 ```bash
 # Generate Node.js code
-promener generate nodejs -i metrics.yaml -o ./metrics
+promener generate nodejs -i metrics.cue -o ./metrics
 
 # Override package name
-promener generate nodejs -i metrics.yaml -o ./metrics -p my-metrics
+promener generate nodejs -i metrics.cue -o ./metrics -p my-metrics
 ```
 
 ### HTML Documentation Command
@@ -463,7 +559,7 @@ promener generate nodejs -i metrics.yaml -o ./metrics -p my-metrics
 promener html [flags]
 
 Flags:
-  -i, --input string    Input YAML specification file (required)
+  -i, --input string    Input CUE specification file (required)
   -o, --output string   Output HTML file (required)
 ```
 
@@ -474,65 +570,96 @@ Promener can generate beautiful, interactive HTML documentation from your metric
 ### Basic Documentation
 
 ```bash
-promener html -i metrics.yaml -o docs/metrics.html
+promener html -i metrics.cue -o docs/metrics.html
 ```
 
 ### Enhanced Documentation with Examples
 
-For richer documentation, you can add descriptions, PromQL examples, alert rules, and deprecation warnings to your YAML:
+For richer documentation, you can add descriptions, PromQL examples, alert rules, and deprecation warnings to your CUE specification:
 
-```yaml
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total number of HTTP requests"
-    labels:
-      method:
-        description: "HTTP method (GET, POST, PUT, DELETE, etc.)"
-      status:
-        description: "HTTP status code (200, 404, 500, etc.)"
-      endpoint:
-        description: "API endpoint path"
-    constLabels:
-      environment:
-        value: "${ENVIRONMENT:production}"
-        description: "Deployment environment (production, staging, etc.)"
-    deprecated:
-      since: "2024-01-15"
-      replacedBy: "request_duration_seconds"
-      reason: "Switching to histogram for better latency tracking"
-    examples:
-      promql:
-        - query: 'rate(http_server_requests_total[5m])'
-          description: "Request rate per second over the last 5 minutes"
-        - query: 'sum by (status) (http_server_requests_total)'
-          description: "Total requests grouped by HTTP status code"
-      alerts:
-        - name: "HighErrorRate"
-          expr: 'rate(http_server_requests_total{status=~"5.."}[5m]) > 0.1'
-          description: "HTTP 5xx error rate is above 10%"
-          for: "5m"
-          severity: "critical"
+```cue
+metrics: {
+    http_requests_total: {
+        namespace: "http"
+        subsystem: "server"
+        type:      "counter"
+        help:      "Total number of HTTP requests"
+        labels: {
+            method: {
+                description: "HTTP method (GET, POST, PUT, DELETE, etc.)"
+            }
+            status: {
+                description: "HTTP status code (200, 404, 500, etc.)"
+            }
+            endpoint: {
+                description: "API endpoint path"
+            }
+        }
+        constLabels: {
+            environment: {
+                value:       "${ENVIRONMENT:production}"
+                description: "Deployment environment (production, staging, etc.)"
+            }
+        }
+        examples: {
+            promql: [
+                {
+                    query:       "rate(http_server_requests_total[5m])"
+                    description: "Request rate per second over the last 5 minutes"
+                },
+                {
+                    query:       "sum by (status) (http_server_requests_total)"
+                    description: "Total requests grouped by HTTP status code"
+                },
+            ]
+            alerts: [
+                {
+                    name:        "HighErrorRate"
+                    expr:        "rate(http_server_requests_total{status=~\"5..\"}[5m]) > 0.1"
+                    description: "HTTP 5xx error rate is above 10%"
+                    for:         "5m"
+                    severity:    "critical"
+                },
+            ]
+        }
+    }
+}
 ```
 
-### Generated Documentation Features
+### Generated Documentation Example
 
-The HTML documentation includes:
+TODO
 
-- **Interactive search and filtering** - Quickly find metrics by name or namespace
-- **Dark mode support** - Automatic theme switching
-- **Deprecation warnings** - Visual warnings for deprecated metrics with migration info
-- **Label descriptions** - Detailed information about each label
-- **PromQL examples** - Ready-to-use queries with copy-to-clipboard
-- **Alert rules** - Prometheus Alertmanager rule examples
-- **Metric organization** - Grouped by namespace and subsystem with type badges
-- **Full metric details** - Type, help text, labels, buckets/objectives
+## Label Validation with CEL
 
-### Example Documentation
+Promener supports runtime label validation using CEL (Common Expression Language). This ensures that label values meet your requirements before being recorded.
 
-See [testdata/metrics_docs.html](testdata/metrics_docs.html) for a complete example generated from [testdata/metrics_with_docs.yaml](testdata/metrics_with_docs.yaml).
+```cue
+labels: {
+    method: {
+        description: "HTTP method"
+        validations: [
+            "value in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']",
+        ]
+    }
+    status: {
+        description: "HTTP status code"
+        validations: [
+            "value.matches('^[1-5][0-9]{2}$')",
+        ]
+    }
+    service: {
+        description: "Service name (DNS-compatible)"
+        validations: [
+            "value.matches('^[a-z][a-z0-9-]*$')",
+            "size(value) >= 3",
+            "size(value) <= 63",
+        ]
+    }
+}
+```
+
+The generated code validates labels at runtime, panicking on validation failures with descriptive error messages. See the [Label Validation](docs/label-validation.md) documentation for more details.
 
 ## Metric Deprecation
 
@@ -540,34 +667,25 @@ Promener supports marking metrics as deprecated with migration information. This
 
 ### Deprecation Syntax
 
-```yaml
-metrics:
-  old_metric:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Old metric - use new_metric instead"
-    deprecated:
-      since: "2024-01-15"           # When the metric was deprecated
-      replacedBy: "new_metric_name"  # The replacement metric
-      reason: "Switching to histogram for better latency tracking"
+```cue
+metrics: {
+    old_metric: {
+        namespace: "http"
+        subsystem: "server"
+        type:      "counter"
+        help:      "Old metric - use new_metric instead"
+        deprecated: {
+            since:      "2024-01-15"
+            replacedBy: "new_metric_name"
+            reason:     "Switching to histogram for better latency tracking"
+        }
+    }
+}
 ```
-
-### Visual Indicators
-
-In the generated HTML documentation:
-
-- **Sidebar TOC**: Deprecated metrics show a ⚠️ warning icon next to their type badge
-- **Metric Details**: A prominent orange warning banner displays:
-  - When the metric was deprecated
-  - Which metric replaces it
-  - The reason for deprecation
-
-This makes it easy for teams to identify deprecated metrics and understand migration paths.
 
 ## Examples
 
-See the [testdata](testdata/) directory for complete examples.
+See the [example](testdata/with_cue_mod) directory for complete examples.
 
 ## License
 
@@ -575,11 +693,11 @@ MIT
 
 ## TODO
 
-- [ ] Standardize histogram buckets by business domain (e.g., HTTP latency, DB query duration, queue processing time)
-- [ ] Standardize summary objectives by business domain (e.g., background jobs, batch processing, async tasks)
-- [ ] Standardize metrics for common usacase
+- [x] Standardize histogram buckets by business domain (e.g., HTTP latency, DB query duration, queue processing time)
+- [x] Standardize summary objectives by business domain (e.g., background jobs, batch processing, async tasks)
+- [x] Standardize metrics for common usacase
 - [ ] Config file for promener
-- [ ] A way to contribute standard / common metrics
+- [x] A way to contribute standard / common metrics
 
 ## Contributing
 

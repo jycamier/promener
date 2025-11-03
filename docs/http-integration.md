@@ -399,5 +399,6 @@ If you see "duplicate metrics collector registration":
 
 ## Next Steps
 
-- [YAML Specification](yaml-specification.md) - Learn about the YAML format
-- [Generated Code Structure](generated-code.md) - Understand the generated code
+- [CUE Specification](cue-specification.md) - Learn about the CUE format
+- [Label Validation](label-validation.md) - Using CEL for runtime validation
+- [Constant Labels](constant-labels.md) - Environment variable substitution

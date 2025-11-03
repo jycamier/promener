@@ -5,7 +5,7 @@ Constant labels (ConstLabels) are labels that are automatically attached to ever
 ## Table of Contents
 
 - [When to Use Constant Labels](#when-to-use-constant-labels)
-- [YAML Syntax](#yaml-syntax)
+- [CUE Syntax](#cue-syntax)
 - [Static Values](#static-values)
 - [Environment Variables](#environment-variables)
 - [Generated Code](#generated-code)
@@ -22,34 +22,54 @@ Constant labels are perfect for:
 - **Instance identification**: hostname, pod name, container ID
 - **Team/ownership**: team name, service owner
 
-## YAML Syntax
+## CUE Syntax
 
 Add `constLabels` to any metric definition:
 
-```yaml
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total HTTP requests"
-    labels:
-      - method
-      - status
-    constLabels:
-      version: "1.0.0"
-      environment: "production"
+```cue
+metrics: {
+    http_requests_total: {
+        namespace: "http"
+        subsystem: "server"
+        type:      "counter"
+        help:      "Total HTTP requests"
+        labels: {
+            method: {description: "HTTP method"}
+            status: {description: "HTTP status"}
+        }
+        constLabels: {
+            version: {
+                value:       "1.0.0"
+                description: "Application version"
+            }
+            environment: {
+                value:       "production"
+                description: "Deployment environment"
+            }
+        }
+    }
+}
 ```
 
 ## Static Values
 
 Use static values for information known at build time:
 
-```yaml
-constLabels:
-  version: "1.0.0"
-  build: "12345"
-  service: "api-gateway"
+```cue
+constLabels: {
+    version: {
+        value:       "1.0.0"
+        description: "Application version"
+    }
+    build: {
+        value:       "12345"
+        description: "Build number"
+    }
+    service: {
+        value:       "api-gateway"
+        description: "Service name"
+    }
+}
 ```
 
 Generated code:
@@ -68,11 +88,21 @@ ConstLabels: prometheus.Labels{
 
 Use `${VAR_NAME}` to read from environment variables:
 
-```yaml
-constLabels:
-  environment: "${ENVIRONMENT}"
-  region: "${AWS_REGION}"
-  hostname: "${HOSTNAME}"
+```cue
+constLabels: {
+    environment: {
+        value:       "${ENVIRONMENT}"
+        description: "Deployment environment"
+    }
+    region: {
+        value:       "${AWS_REGION}"
+        description: "AWS region"
+    }
+    hostname: {
+        value:       "${HOSTNAME}"
+        description: "Hostname"
+    }
+}
 ```
 
 Generated code:
@@ -91,11 +121,21 @@ ConstLabels: prometheus.Labels{
 
 Use `${VAR_NAME:default}` to provide a fallback value:
 
-```yaml
-constLabels:
-  environment: "${ENVIRONMENT:production}"
-  region: "${AWS_REGION:us-east-1}"
-  datacenter: "${DATACENTER:dc1}"
+```cue
+constLabels: {
+    environment: {
+        value:       "${ENVIRONMENT:production}"
+        description: "Deployment environment"
+    }
+    region: {
+        value:       "${AWS_REGION:us-east-1}"
+        description: "AWS region"
+    }
+    datacenter: {
+        value:       "${DATACENTER:dc1}"
+        description: "Datacenter location"
+    }
+}
 ```
 
 Generated code:
@@ -126,20 +166,33 @@ Promener automatically:
 
 ### Example: Complete Generated Code
 
-**YAML:**
-```yaml
-metrics:
-  requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total requests"
-    labels:
-      - method
-    constLabels:
-      version: "1.0.0"
-      environment: "${ENVIRONMENT:production}"
-      region: "${REGION}"
+**CUE:**
+```cue
+metrics: {
+    http_requests_total: {
+        namespace: "http"
+        subsystem: "server"
+        type:      "counter"
+        help:      "Total requests"
+        labels: {
+            method: {description: "HTTP method"}
+        }
+        constLabels: {
+            version: {
+                value:       "1.0.0"
+                description: "Application version"
+            }
+            environment: {
+                value:       "${ENVIRONMENT:production}"
+                description: "Deployment environment"
+            }
+            region: {
+                value:       "${REGION}"
+                description: "AWS region"
+            }
+        }
+    }
+}
 ```
 
 **Generated Go:**
@@ -190,159 +243,189 @@ func getEnvOrDefault(key, defaultValue string) string {
 
 Constant labels are included in every time series. Avoid high-cardinality values:
 
-```yaml
-# ❌ BAD: High cardinality
-constLabels:
-  request_id: "${REQUEST_ID}"  # Different for each request
-  user_id: "${USER_ID}"        # Different for each user
+```cue
+// ❌ BAD: High cardinality
+constLabels: {
+    request_id: {value: "${REQUEST_ID}"}  // Different for each request
+    user_id: {value: "${USER_ID}"}        // Different for each user
+}
 
-# ✅ GOOD: Low cardinality
-constLabels:
-  environment: "${ENVIRONMENT:production}"
-  region: "${AWS_REGION:us-east-1}"
-  version: "1.0.0"
+// ✅ GOOD: Low cardinality
+constLabels: {
+    environment: {value: "${ENVIRONMENT:production}", description: "Environment"}
+    region: {value: "${AWS_REGION:us-east-1}", description: "AWS region"}
+    version: {value: "1.0.0", description: "Version"}
+}
 ```
 
 ### 2. Use for Static Metadata Only
 
 Constant labels can't change during runtime. Use dynamic labels for runtime values:
 
-```yaml
-metrics:
-  requests_total:
-    type: counter
-    labels:
-      - method      # ✅ Dynamic: changes per request
-      - status      # ✅ Dynamic: changes per request
-    constLabels:
-      version: "1.0.0"  # ✅ Static: same for all requests
+```cue
+metrics: {
+    http_requests_total: {
+        type: "counter"
+        labels: {
+            method: {description: "HTTP method"}      // ✅ Dynamic: changes per request
+            status: {description: "HTTP status"}      // ✅ Dynamic: changes per request
+        }
+        constLabels: {
+            version: {value: "1.0.0", description: "Version"}  // ✅ Static: same for all requests
+        }
+    }
+}
 ```
 
 ### 3. Provide Defaults for Safety
 
 Always provide defaults for environment-based labels to prevent empty values:
 
-```yaml
-# ❌ Risky: might be empty
-constLabels:
-  environment: "${ENVIRONMENT}"
+```cue
+// ❌ Risky: might be empty
+constLabels: {
+    environment: {value: "${ENVIRONMENT}"}
+}
 
-# ✅ Safe: has fallback
-constLabels:
-  environment: "${ENVIRONMENT:production}"
+// ✅ Safe: has fallback
+constLabels: {
+    environment: {value: "${ENVIRONMENT:production}", description: "Environment"}
+}
 ```
 
 ### 4. Use Meaningful Names
 
 Choose label names that are clear and follow Prometheus conventions:
 
-```yaml
-# ✅ GOOD
-constLabels:
-  environment: "${ENV:production}"
-  region: "${AWS_REGION:us-east-1}"
-  version: "1.0.0"
+```cue
+// ✅ GOOD
+constLabels: {
+    environment: {value: "${ENV:production}", description: "Environment"}
+    region: {value: "${AWS_REGION:us-east-1}", description: "AWS region"}
+    version: {value: "1.0.0", description: "Application version"}
+}
 
-# ❌ BAD
-constLabels:
-  env: "${E}"
-  reg: "${R}"
-  v: "1"
+// ❌ BAD
+constLabels: {
+    env: {value: "${E}"}
+    reg: {value: "${R}"}
+    v: {value: "1"}
+}
 ```
 
 ### 5. Be Consistent Across Metrics
 
 Use the same constant labels across related metrics:
 
-```yaml
-# Global const labels that apply to all metrics
-metrics:
-  requests_total:
-    # ... metric config ...
-    constLabels:
-      environment: "${ENVIRONMENT:production}"
-      version: "1.0.0"
-
-  request_duration_seconds:
-    # ... metric config ...
-    constLabels:
-      environment: "${ENVIRONMENT:production}"
-      version: "1.0.0"
+```cue
+// Global const labels that apply to all metrics
+metrics: {
+    http_requests_total: {
+        // ... metric config ...
+        constLabels: {
+            environment: {value: "${ENVIRONMENT:production}", description: "Environment"}
+            version: {value: "1.0.0", description: "Version"}
+        }
+    }
+    http_request_duration_seconds: {
+        // ... metric config ...
+        constLabels: {
+            environment: {value: "${ENVIRONMENT:production}", description: "Environment"}
+            version: {value: "1.0.0", description: "Version"}
+        }
+    }
+}
 ```
 
 ## Examples
 
 ### Example 1: Kubernetes Deployment
 
-```yaml
-metrics:
-  http_requests_total:
-    namespace: http
-    subsystem: server
-    type: counter
-    help: "Total HTTP requests"
-    labels:
-      - method
-      - status
-    constLabels:
-      pod: "${POD_NAME}"
-      namespace: "${POD_NAMESPACE}"
-      cluster: "${CLUSTER_NAME:production}"
-      version: "${APP_VERSION:1.0.0}"
+```cue
+metrics: {
+    http_requests_total: {
+        namespace: "http"
+        subsystem: "server"
+        type:      "counter"
+        help:      "Total HTTP requests"
+        labels: {
+            method: {description: "HTTP method"}
+            status: {description: "HTTP status"}
+        }
+        constLabels: {
+            pod: {value: "${POD_NAME}", description: "Pod name"}
+            namespace: {value: "${POD_NAMESPACE}", description: "K8s namespace"}
+            cluster: {value: "${CLUSTER_NAME:production}", description: "Cluster name"}
+            version: {value: "${APP_VERSION:1.0.0}", description: "App version"}
+        }
+    }
+}
 ```
 
 ### Example 2: Multi-Region Service
 
-```yaml
-metrics:
-  api_calls_total:
-    namespace: api
-    subsystem: gateway
-    type: counter
-    help: "Total API calls"
-    labels:
-      - endpoint
-      - method
-    constLabels:
-      region: "${AWS_REGION:us-east-1}"
-      availability_zone: "${AWS_AZ:us-east-1a}"
-      environment: "${ENVIRONMENT:production}"
+```cue
+metrics: {
+    api_calls_total: {
+        namespace: "api"
+        subsystem: "gateway"
+        type:      "counter"
+        help:      "Total API calls"
+        labels: {
+            endpoint: {description: "API endpoint"}
+            method: {description: "HTTP method"}
+        }
+        constLabels: {
+            region: {value: "${AWS_REGION:us-east-1}", description: "AWS region"}
+            availability_zone: {value: "${AWS_AZ:us-east-1a}", description: "AZ"}
+            environment: {value: "${ENVIRONMENT:production}", description: "Environment"}
+        }
+    }
+}
 ```
 
 ### Example 3: Microservice with Version Tracking
 
-```yaml
-metrics:
-  service_requests_total:
-    namespace: myservice
-    subsystem: api
-    type: counter
-    help: "Total service requests"
-    labels:
-      - operation
-    constLabels:
-      service: "user-service"
-      version: "${BUILD_VERSION:dev}"
-      commit: "${GIT_COMMIT:unknown}"
-      build_date: "${BUILD_DATE:unknown}"
+```cue
+metrics: {
+    service_requests_total: {
+        namespace: "myservice"
+        subsystem: "api"
+        type:      "counter"
+        help:      "Total service requests"
+        labels: {
+            operation: {description: "Operation name"}
+        }
+        constLabels: {
+            service: {value: "user-service", description: "Service name"}
+            version: {value: "${BUILD_VERSION:dev}", description: "Build version"}
+            commit: {value: "${GIT_COMMIT:unknown}", description: "Git commit"}
+            build_date: {value: "${BUILD_DATE:unknown}", description: "Build date"}
+        }
+    }
+}
 ```
 
 ### Example 4: Multi-Tenant Application
 
-```yaml
-metrics:
-  queries_total:
-    namespace: db
-    subsystem: postgres
-    type: counter
-    help: "Total database queries"
-    labels:
-      - operation
-      - table
-    constLabels:
-      tenant: "${TENANT_ID}"
-      environment: "${ENVIRONMENT:production}"
-      database: "${DB_NAME:main}"
+```cue
+metrics: {
+    queries_total: {
+        namespace: "db"
+        subsystem: "postgres"
+        type:      "counter"
+        help:      "Total database queries"
+        labels: {
+            operation: {description: "SQL operation"}
+            table: {description: "Table name"}
+        }
+        constLabels: {
+            tenant: {value: "${TENANT_ID}", description: "Tenant identifier"}
+            environment: {value: "${ENVIRONMENT:production}", description: "Environment"}
+            database: {value: "${DB_NAME:main}", description: "Database name"}
+        }
+    }
+}
 ```
 
 ## Runtime Behavior
@@ -385,13 +468,14 @@ registry := metrics.NewMetricsRegistry(prometheus.DefaultRegisterer)
 
 **Problem**: Constant label doesn't show in metrics
 
-**Cause**: YAML syntax error or missing tag
+**Cause**: CUE syntax error or missing field
 
-**Solution**: Check YAML formatting and ensure it's under `constLabels`:
+**Solution**: Check CUE formatting and ensure it's under `constLabels`:
 
-```yaml
-constLabels:
-  environment: "production"  # Correct indentation
+```cue
+constLabels: {
+    environment: {value: "production", description: "Environment"}  // Correct structure
+}
 ```
 
 ### High Cardinality Warning
@@ -404,6 +488,6 @@ constLabels:
 
 ## Related Documentation
 
-- [YAML Specification](yaml-specification.md)
-- [Generated Code Structure](generated-code.md)
-- [HTTP Server Integration](http-integration.md)
+- [CUE Specification](cue-specification.md) - Complete CUE format reference
+- [Label Validation](label-validation.md) - CEL validation expressions
+- [HTTP Server Integration](http-integration.md) - Integration examples

@@ -1,0 +1,91 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'testdata/**/*.cue'
+      - '.github/workflows/docs.yaml'
+      - 'internal/**'
+      - 'cmd/**'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build promener
+        run: go build -o promener
+
+      - name: Generate HTML documentation
+        run: |
+          mkdir -p docs-output
+          ./promener html -i testdata/with_cue_mod/metrics.cue -o docs-output/index.html
+
+      - name: Create docs index page
+        run: |
+          cat > docs-output/README.md << 'EOF'
+          # Promener Documentation Example
+
+          This is an automatically generated example of HTML documentation produced by Promener.
+
+          ## Files
+
+          - [Metrics Documentation](index.html) - Complete metrics documentation with examples
+
+          ## About
+
+          This documentation is generated from `testdata/with_cue_mod/metrics.cue` using:
+
+          ```bash
+          promener html -i testdata/with_cue_mod/metrics.cue -o index.html
+          ```
+
+          The specification includes:
+          - CUE modules with external imports
+          - Metrics with CEL label validations
+          - Deprecated metrics with migration info
+          - Standard metric definitions
+
+          ## Links
+
+          - [GitHub Repository](https://github.com/jycamier/promener)
+          - [Documentation](https://github.com/jycamier/promener/tree/main/docs)
+          EOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs-output'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
