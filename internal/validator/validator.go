@@ -1,16 +1,62 @@
 package validator
 
-import "github.com/jycamier/promener/internal/domain"
+import (
+	"fmt"
 
-// SchemaValidator validates Promener specifications against CUE schemas.
-type SchemaValidator interface {
-	// ValidateFile validates a YAML file against a CUE schema file.
-	// Returns a ValidationResult containing any validation errors found.
-	ValidateFile(yamlPath, schemaPath string) (*ValidationResult, error)
+	"github.com/jycamier/promener/internal/domain"
+)
 
-	// Validate validates a parsed Specification against a CUE schema file.
-	// Returns a ValidationResult containing any validation errors found.
-	Validate(spec *domain.Specification, schemaPath string) (*ValidationResult, error)
+// Validator validates and extracts Promener specifications from CUE files.
+type Validator struct {
+	loader    *CueLoader
+	extractor *CueExtractor
+}
+
+// New creates a new Validator instance.
+func New() *Validator {
+	return &Validator{
+		loader:    NewCueLoader(),
+		extractor: NewCueExtractor(),
+	}
+}
+
+// ValidateAndExtract loads a CUE file, validates it against the embedded schema,
+// and extracts it into a domain.Specification.
+// Returns the specification, validation results, and any errors.
+func (v *Validator) ValidateAndExtract(cuePath string) (*domain.Specification, *ValidationResult, error) {
+	// Load and validate the CUE file
+	cueValue, result, err := v.loader.LoadAndValidate(cuePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// If there are CUE validation errors, return early
+	if !result.Valid || result.HasErrors() {
+		return nil, result, fmt.Errorf("CUE validation failed")
+	}
+
+	// Extract the specification
+	spec, err := v.extractor.Extract(cueValue)
+	if err != nil {
+		// Add domain validation errors to the result
+		result.Valid = false
+		result.DomainErrors = append(result.DomainErrors, ValidationError{
+			Path:    "",
+			Message: err.Error(),
+			Source:  "domain",
+			Line:    0,
+		})
+		return nil, result, err
+	}
+
+	return spec, result, nil
+}
+
+// Validate validates a CUE file without extracting the specification.
+// Useful for the `vet` command which only checks validity.
+func (v *Validator) Validate(cuePath string) (*ValidationResult, error) {
+	_, result, err := v.ValidateAndExtract(cuePath)
+	return result, err
 }
 
 // ValidationResult contains the combined results of domain and CUE validation.

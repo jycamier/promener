@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/jycamier/promener/internal/generator"
-	"github.com/jycamier/promener/internal/parser"
+	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
 )
 
@@ -20,12 +20,12 @@ var (
 var goCmd = &cobra.Command{
 	Use:   "go",
 	Short: "Generate Go code for Prometheus metrics",
-	Long: `Generate Go code for Prometheus metrics from a YAML specification file.
+	Long: `Generate Go code for Prometheus metrics from a CUE specification file.
 Generates metrics.go and optionally metrics_fx.go in the output directory.
 
 Examples:
-  promener generate go -i metrics.yaml -o ./out
-  promener generate go -i metrics.yaml -o ./out --di --fx`,
+  promener generate go -i metrics.cue -o ./out
+  promener generate go -i metrics.cue -o ./out --di --fx`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Validate DI flags
 		if goGenerateDI && !goGenerateFx {
@@ -37,11 +37,17 @@ Examples:
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 
-		// Parse the YAML specification
-		p := parser.New()
-		spec, err := p.ParseFile(inputFile)
-		if err != nil {
-			return fmt.Errorf("failed to parse specification: %w", err)
+		// Validate and extract the CUE specification
+		v := validator.New()
+		spec, result, err := v.ValidateAndExtract(inputFile)
+		if err != nil || result.HasErrors() {
+			if result != nil && result.HasErrors() {
+				// Format validation errors
+				formatter := validator.NewFormatter(validator.FormatText)
+				output, _ := formatter.Format(result)
+				fmt.Fprint(os.Stderr, output)
+			}
+			return fmt.Errorf("failed to validate specification: %w", err)
 		}
 
 		// Determine package name: -p flag or output directory name

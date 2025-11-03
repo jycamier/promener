@@ -3,11 +3,16 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
+	"os"
 	"os/signal"
 	"time"
 
+	"github.com/jycamier/promener/internal/domain"
 	"github.com/jycamier/promener/internal/signals"
+	"github.com/jycamier/promener/internal/validator"
 	"github.com/jycamier/promener/pkg/docs"
 	"github.com/spf13/cobra"
 )
@@ -24,18 +29,55 @@ func isURI(input string) bool {
 	return err == nil && u.IsAbs()
 }
 
-// loadSpecFromInput loads a spec from either a file path or URI
-func loadSpecFromInput(input string) (*docs.Specification, error) {
+// loadSpecFromInput loads a spec from either a CUE file path or URI
+func loadSpecFromInput(input string) (*domain.Specification, error) {
+	v := validator.New()
+
 	if isURI(input) {
-		return docs.LoadSpecFromURL(input)
+		// Download CUE from URI to temporary file
+		resp, err := http.Get(input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch URI: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
+		}
+
+		// Create temp file for the downloaded CUE
+		tmpFile, err := os.CreateTemp("", "promener_*.cue")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temp file: %w", err)
+		}
+		defer os.Remove(tmpFile.Name())
+		defer tmpFile.Close()
+
+		// Write downloaded content
+		if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+			return nil, fmt.Errorf("failed to write temp file: %w", err)
+		}
+
+		// Validate and extract from temp file
+		spec, result, err := v.ValidateAndExtract(tmpFile.Name())
+		if err != nil || result.HasErrors() {
+			return nil, fmt.Errorf("validation failed for URI %s: %w", input, err)
+		}
+		return spec, nil
 	}
-	return docs.LoadSpec(input)
+
+	// Local file
+	spec, result, err := v.ValidateAndExtract(input)
+	if err != nil || result.HasErrors() {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+	return spec, nil
 }
 
 // htmlCmd represents the html command
 var htmlCmd = &cobra.Command{
 	Use:   "html",
-	Short: "Generate HTML documentation from YAML specification",
+	Short: "Generate HTML documentation from CUE specification",
 	Long: `Generate beautiful HTML documentation for your Prometheus metrics.
 
 The HTML documentation includes:
@@ -46,24 +88,24 @@ The HTML documentation includes:
 - Alertmanager alert rule examples
 - Detailed label descriptions
 
-Input sources can be local files or URIs (http/https).
+Input sources can be local CUE files or URIs (http/https).
 
 Examples:
   # Single file
-  promener html -i metrics.yaml -o docs/metrics.html
+  promener html -i metrics.cue -o docs/metrics.html
 
   # From URI
-  promener html -i https://example.com/metrics.yaml -o docs/metrics.html
+  promener html -i https://example.com/metrics.cue -o docs/metrics.html
 
   # Multiple files (aggregated into one HTML)
-  promener html -i api.yaml -i users.yaml -i orders.yaml -o docs/metrics.html
+  promener html -i api.cue -i users.cue -i orders.cue -o docs/metrics.html
 
   # Mix of files and URIs
-  promener html -i metrics.yaml -i https://example.com/remote.yaml -o docs/metrics.html
+  promener html -i metrics.cue -i https://example.com/remote.cue -o docs/metrics.html
 
   # With watch mode
-  promener html -i metrics.yaml -o docs/metrics.html --watch 5s
-  promener html -i api.yaml -i users.yaml -o docs/metrics.html --watch 5s`,
+  promener html -i metrics.cue -o docs/metrics.html --watch 5s
+  promener html -i api.cue -i users.cue -o docs/metrics.html --watch 5s`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(htmlInputFiles) == 0 {
 			return fmt.Errorf("at least one input file is required")
@@ -143,7 +185,7 @@ Examples:
 func init() {
 	rootCmd.AddCommand(htmlCmd)
 
-	htmlCmd.Flags().StringSliceVarP(&htmlInputFiles, "input", "i", []string{}, "Input YAML specification (file path or URI) - can be specified multiple times (required)")
+	htmlCmd.Flags().StringSliceVarP(&htmlInputFiles, "input", "i", []string{}, "Input CUE specification (file path or URI) - can be specified multiple times (required)")
 	htmlCmd.Flags().StringVarP(&htmlOutputFile, "output", "o", "", "Output HTML file (required)")
 	htmlCmd.Flags().DurationVar(&htmlWatch, "watch", 0, "Watch for changes and regenerate (e.g., 5s, 1m)")
 

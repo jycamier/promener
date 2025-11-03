@@ -52,33 +52,3 @@ func GenerateHTMLFile(spec *Specification, outputPath string) error {
 	return gen.GenerateFile(spec, outputPath)
 }
 
-// GenerateHTMLFromFile loads a spec from a YAML file and generates HTML documentation.
-// This is the simplest way to generate HTML: just provide input and output paths.
-func GenerateHTMLFromFile(specPath, outputPath string) error {
-	spec, err := LoadSpec(specPath)
-	if err != nil {
-		return err
-	}
-
-	return GenerateHTMLFile(spec, outputPath)
-}
-
-// GenerateHTMLFromFileToBytes loads a spec from a YAML file and returns HTML as bytes.
-func GenerateHTMLFromFileToBytes(specPath string) ([]byte, error) {
-	spec, err := LoadSpec(specPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return GenerateHTML(spec)
-}
-
-// GenerateHTMLFromBytes loads a spec from YAML bytes and generates HTML.
-func GenerateHTMLFromBytes(yamlData []byte) ([]byte, error) {
-	spec, err := LoadSpecFromBytes(yamlData)
-	if err != nil {
-		return nil, err
-	}
-
-	return GenerateHTML(spec)
-}

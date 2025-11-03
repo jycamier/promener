@@ -4,48 +4,41 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jycamier/promener/internal/parser"
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
 )
 
-var (
-	vetInputFile  string
-	vetSchemaFile string
-	vetFormat     string
-)
+var vetFormat string
 
 // vetCmd represents the vet command
 var vetCmd = &cobra.Command{
-	Use:   "vet",
-	Short: "Validate a Promener YAML specification against a CUE schema",
-	Long: `Validate a Promener metrics specification file against a CUE schema.
+	Use:   "vet <file.cue>",
+	Short: "Validate a Promener CUE specification",
+	Long: `Validate a Promener metrics specification file written in CUE.
 
 This command performs hybrid validation:
-  1. Domain validation - checks the specification structure and constraints
-  2. CUE schema validation - validates against organizational standards
+  1. CUE schema validation - validates against embedded organizational standards
+  2. Domain validation - checks the specification structure and constraints
+
+The schema version is determined automatically from the 'version' field in the CUE file.
+The corresponding embedded schema (e.g., v1, v2) is loaded and used for validation.
 
 The validation results can be output in text (human-readable) or JSON format
 for integration with CI/CD pipelines.
 
 Examples:
   # Validate with text output
-  promener vet -i metrics.yaml -s schema.cue
+  promener vet metrics.cue
 
   # Validate with JSON output for CI/CD
-  promener vet -i metrics.yaml -s schema.cue --format json
+  promener vet metrics.cue --format json
 
   # Exit codes:
   #   0 - validation passed
   #   1 - validation failed`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Validate inputs
-		if vetInputFile == "" {
-			return fmt.Errorf("input file is required (use -i or --input)")
-		}
-		if vetSchemaFile == "" {
-			return fmt.Errorf("schema file is required (use -s or --schema)")
-		}
+		cuePath := args[0]
 
 		// Validate format
 		format := validator.OutputFormat(vetFormat)
@@ -53,18 +46,24 @@ Examples:
 			return fmt.Errorf("invalid format: %s (must be 'text' or 'json')", vetFormat)
 		}
 
-		// Parse the YAML file
-		p := parser.New()
-		spec, err := p.ParseFile(vetInputFile)
+		// Create validator and perform validation
+		v := validator.New()
+		result, err := v.Validate(cuePath)
+
+		// Handle validation errors
+		var validationFailed bool
 		if err != nil {
-			return fmt.Errorf("failed to parse input file: %w", err)
+			// Check if it's a validation error (result exists) or a system error
+			if result != nil && result.HasErrors() {
+				validationFailed = true
+			} else {
+				// System error (file not found, invalid CUE, etc.)
+				return fmt.Errorf("validation error: %w", err)
+			}
 		}
 
-		// Create validator and perform validation
-		v := validator.NewCueValidator()
-		result, err := v.Validate(spec, vetSchemaFile)
-		if err != nil {
-			return fmt.Errorf("validation error: %w", err)
+		if result.HasErrors() {
+			validationFailed = true
 		}
 
 		// Format and display results
@@ -77,7 +76,7 @@ Examples:
 		fmt.Print(output)
 
 		// Exit with code 1 if validation failed
-		if result.HasErrors() || !result.Valid {
+		if validationFailed || !result.Valid {
 			os.Exit(1)
 		}
 
@@ -89,11 +88,5 @@ func init() {
 	rootCmd.AddCommand(vetCmd)
 
 	// Define flags
-	vetCmd.Flags().StringVarP(&vetInputFile, "input", "i", "", "Input YAML file to validate (required)")
-	vetCmd.Flags().StringVarP(&vetSchemaFile, "schema", "s", "", "CUE schema file for validation (required)")
 	vetCmd.Flags().StringVarP(&vetFormat, "format", "f", "text", "Output format: text or json")
-
-	// Mark required flags
-	vetCmd.MarkFlagRequired("input")
-	vetCmd.MarkFlagRequired("schema")
 }

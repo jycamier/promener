@@ -210,3 +210,68 @@ func TestFormatter_Format_InvalidFormat(t *testing.T) {
 		t.Errorf("Error should mention unsupported format, got: %v", err)
 	}
 }
+
+func TestValidationResult_HasErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		result   ValidationResult
+		expected bool
+	}{
+		{
+			name: "no errors",
+			result: ValidationResult{
+				Valid:        true,
+				CueErrors:    []ValidationError{},
+				DomainErrors: []ValidationError{},
+			},
+			expected: false,
+		},
+		{
+			name: "has CUE errors",
+			result: ValidationResult{
+				Valid: false,
+				CueErrors: []ValidationError{
+					{Message: "test error", Source: "cue"},
+				},
+				DomainErrors: []ValidationError{},
+			},
+			expected: true,
+		},
+		{
+			name: "has domain errors",
+			result: ValidationResult{
+				Valid:     false,
+				CueErrors: []ValidationError{},
+				DomainErrors: []ValidationError{
+					{Message: "test error", Source: "domain"},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.result.HasErrors(); got != tt.expected {
+				t.Errorf("HasErrors() = %v, expected %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestValidationResult_TotalErrors(t *testing.T) {
+	result := ValidationResult{
+		CueErrors: []ValidationError{
+			{Message: "error1", Source: "cue"},
+			{Message: "error2", Source: "cue"},
+		},
+		DomainErrors: []ValidationError{
+			{Message: "error3", Source: "domain"},
+		},
+	}
+
+	expected := 3
+	if got := result.TotalErrors(); got != expected {
+		t.Errorf("TotalErrors() = %d, expected %d", got, expected)
+	}
+}
