@@ -36,6 +36,12 @@ go test -v ./...                   # Run tests with verbose output
 
 # Override package name
 ./promener generate -i metrics.yaml -o output.go -p mymetrics
+
+# Validate metrics specification against CUE schema
+./promener vet -i testdata/metrics.yaml -s schema.cue
+
+# Validate with JSON output for CI/CD
+./promener vet -i metrics.yaml -s schema.cue --format json
 ```
 
 ### Development with go generate
@@ -76,14 +82,24 @@ go generate ./...                  # Run all go:generate directives
 - Generates interactive HTML documentation from YAML specifications
 - Features: search, dark mode, PromQL examples, Grafana/Alertmanager examples
 
+**Validator** (`internal/validator/`)
+- `SchemaValidator` interface for validating specifications against CUE schemas
+- `CueValidator`: Implements validation using CUE language (cuelang.org)
+- Performs hybrid validation: domain rules + CUE schema constraints
+- Handles JSON marshalling of specifications, including conversion of `map[float64]float64` to JSON-compatible format
+- `Formatter`: Formats validation results in text or JSON format
+- Supports organizational standards enforcement via CUE schemas
+
 **Commands** (`cmd/`)
 - `root.go`: Base cobra command
 - `generate.go`: Code generation command with flags for input, output, package override, and FX module
 - `html.go`: HTML documentation generation command
+- `vet.go`: Validation command that checks specifications against CUE schemas (hybrid: domain + CUE validation)
 - `version.go`: Version information
 
 ### Code Flow
 
+**Generation Flow:**
 1. **Input**: YAML file defining metrics with namespace, subsystem, type, labels, and optional constant labels
 2. **Parse**: `parser.ParseFile()` → `domain.Specification` (validated)
 3. **Transform**: `generator.buildTemplateData()` organizes metrics by namespace/subsystem into `TemplateData`
@@ -94,6 +110,18 @@ go generate ./...                  # Run all go:generate directives
    - `sync.Once` for thread-safe initialization
 5. **Format**: `go/format.Source()` formats the output
 6. **Write**: Generated code written to file
+
+**Validation Flow (vet command):**
+1. **Input**: YAML file + CUE schema file
+2. **Parse**: `parser.New().ParseFile()` → `domain.Specification`
+3. **Domain Validation**: `spec.Validate()` checks domain rules (required fields, name formats, type constraints)
+4. **CUE Validation**:
+   - Load and compile CUE schema
+   - Convert specification to JSON (handling `map[float64]float64` conversion)
+   - Unify specification with schema using CUE
+   - Collect validation errors with paths and line numbers
+5. **Format Results**: Text (human-readable with ✓/✗) or JSON (machine-readable for CI/CD)
+6. **Exit**: Code 0 (success) or 1 (validation errors found)
 
 ### Naming Conventions
 
@@ -136,8 +164,12 @@ Test files follow the `_test.go` convention:
 - `parser_test.go`: Tests YAML parsing and validation
 - `metric_test.go`: Tests metric validation logic
 - `envvar_test.go`: Tests environment variable parsing and substitution
+- `cue_validator_test.go`: Tests CUE schema validation
+- `formatter_test.go`: Tests validation result formatting (text/JSON)
 
-Use `testdata/` directory for test fixtures (e.g., `testdata/metrics.yaml`)
+Use `testdata/` directory for test fixtures:
+- `testdata/*.yaml`: YAML specification test files
+- `testdata/schemas/*.cue`: CUE schema test files
 
 ## Key Design Decisions
 
