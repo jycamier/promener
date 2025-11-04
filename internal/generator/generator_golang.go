@@ -11,9 +11,16 @@ import (
 //go:embed templates/go/*.gotmpl
 var templatesFS embed.FS
 
+// GolangGenerator generates Go code for Prometheus metrics
 type GolangGenerator struct {
 	generator *Generator
 }
+
+// Ensure GolangGenerator implements MetricsGenerator and DIGenerator
+var (
+	_ MetricsGenerator = (*GolangGenerator)(nil)
+	_ DIGenerator      = (*GolangGenerator)(nil)
+)
 
 func NewGolangGenerator(packageName string, outputPath string) (*GolangGenerator, error) {
 	builder := NewGoTemplateDataBuilder()

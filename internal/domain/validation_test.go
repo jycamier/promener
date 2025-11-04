@@ -1,8 +1,24 @@
 package domain
 
 import (
+	"fmt"
 	"testing"
 )
+
+// validateLabelValue validates a label value against all its validation rules (test helper)
+func validateLabelValue(label *LabelDefinition, value string) error {
+	for _, validationExpr := range label.Validations {
+		validation, err := ParseValidation(validationExpr)
+		if err != nil {
+			return fmt.Errorf("invalid validation expression for label '%s': %w", label.Name, err)
+		}
+
+		if err := validation.Validate(value); err != nil {
+			return fmt.Errorf("validation failed for label '%s': %w", label.Name, err)
+		}
+	}
+	return nil
+}
 
 func TestParseValidation(t *testing.T) {
 	tests := []struct {
@@ -235,9 +251,9 @@ func TestValidateLabelValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateLabelValue(tt.label, tt.value)
+			err := validateLabelValue(tt.label, tt.value)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateLabelValue() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("validateLabelValue() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

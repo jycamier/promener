@@ -11,9 +11,16 @@ import (
 //go:embed templates/dotnet/*.gotmpl
 var dotnetTemplatesFS embed.FS
 
+// DotNetGenerator generates .NET/C# code for Prometheus metrics
 type DotNetGenerator struct {
 	generator *Generator
 }
+
+// Ensure DotNetGenerator implements MetricsGenerator and DIGenerator
+var (
+	_ MetricsGenerator = (*DotNetGenerator)(nil)
+	_ DIGenerator      = (*DotNetGenerator)(nil)
+)
 
 func NewDotNetGenerator(packageName string, outputPath string) (*DotNetGenerator, error) {
 	builder := NewDotNetTemplateDataBuilder()

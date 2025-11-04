@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/jycamier/promener/internal/domain"
+	"github.com/jycamier/promener/internal/htmlgen"
 	"github.com/jycamier/promener/internal/signals"
 	"github.com/jycamier/promener/internal/validator"
-	"github.com/jycamier/promener/pkg/docs"
 	"github.com/spf13/cobra"
 )
 
@@ -113,7 +113,7 @@ Examples:
 
 		generateHTML := func() error {
 			// Load all specifications
-			var builder docs.Builder
+			var builder *htmlgen.Builder
 
 			if len(htmlInputFiles) == 1 {
 				// Single file or URI: use simple generation
@@ -122,12 +122,12 @@ Examples:
 					return fmt.Errorf("failed to load spec: %w", err)
 				}
 
-				if err := docs.GenerateHTMLFile(spec, htmlOutputFile); err != nil {
+				generator := htmlgen.NewGenerator()
+				if err := generator.GenerateFile(spec, htmlOutputFile); err != nil {
 					return fmt.Errorf("failed to generate HTML: %w", err)
 				}
 			} else {
-				// todo: make a better / custom title and version
-				builder = docs.NewHTMLBuilder("Aggregated Metrics", "1.0.0")
+				builder = htmlgen.NewBuilder("Aggregated Metrics", "1.0.0")
 
 				for _, inputFile := range htmlInputFiles {
 					spec, err := loadSpecFromInput(inputFile)
@@ -137,7 +137,7 @@ Examples:
 					builder.AddFromSpec(spec)
 				}
 
-				if err := builder.BuildHTMLFile(htmlOutputFile); err != nil {
+				if err := builder.Build(htmlOutputFile); err != nil {
 					return fmt.Errorf("failed to generate HTML: %w", err)
 				}
 			}

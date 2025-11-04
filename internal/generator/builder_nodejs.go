@@ -23,41 +23,37 @@ func NewNodeJSTemplateDataBuilder() *NodeJSTemplateDataBuilder {
 func (b *NodeJSTemplateDataBuilder) BuildTemplateData(spec *domain.Specification, packageName string) *TemplateData {
 	data := b.common.BuildTemplateData(spec, packageName)
 
-	// Enrich all metrics with Node.js-specific fields
-	for i := range data.Namespaces {
-		for j := range data.Namespaces[i].Subsystems {
-			for k := range data.Namespaces[i].Subsystems[j].Metrics {
-				metric := &data.Namespaces[i].Subsystems[j].Metrics[k]
-
-				// Set NodeJSType for prom-client
-				switch metric.Type {
-				case "counter":
-					metric.NodeJSType = "Counter"
-				case "gauge":
-					metric.NodeJSType = "Gauge"
-				case "histogram":
-					metric.NodeJSType = "Histogram"
-				case "summary":
-					metric.NodeJSType = "Summary"
-				}
-
-				// Build method parameters for dynamic labels
-				var params []string
-				var args []string
-				for _, label := range metric.Labels {
-					paramName := toLowerCamelCase(label)
-					params = append(params, fmt.Sprintf("%s: string", paramName))
-					args = append(args, paramName)
-				}
-				metric.NodeJSMethodParams = strings.Join(params, ", ")
-				metric.NodeJSMethodArgs = strings.Join(args, ", ")
-
-				// Build const label variable names for label object construction
-				// (ConstLabelKeys is already sorted by CommonTemplateDataBuilder)
-				metric.NodeJSConstLabelArgs = strings.Join(metric.ConstLabelKeys, ", ")
-			}
+	// Enrich all metrics with Node.js-specific fields using the common helper
+	_ = b.common.EnrichMetrics(data, func(metric *MetricData) error {
+		// Set NodeJSType for prom-client
+		switch metric.Type {
+		case "counter":
+			metric.NodeJSType = "Counter"
+		case "gauge":
+			metric.NodeJSType = "Gauge"
+		case "histogram":
+			metric.NodeJSType = "Histogram"
+		case "summary":
+			metric.NodeJSType = "Summary"
 		}
-	}
+
+		// Build method parameters for dynamic labels
+		var params []string
+		var args []string
+		for _, label := range metric.Labels {
+			paramName := toLowerCamelCase(label)
+			params = append(params, fmt.Sprintf("%s: string", paramName))
+			args = append(args, paramName)
+		}
+		metric.NodeJSMethodParams = strings.Join(params, ", ")
+		metric.NodeJSMethodArgs = strings.Join(args, ", ")
+
+		// Build const label variable names for label object construction
+		// (ConstLabelKeys is already sorted by CommonTemplateDataBuilder)
+		metric.NodeJSConstLabelArgs = strings.Join(metric.ConstLabelKeys, ", ")
+
+		return nil
+	})
 
 	return data
 }

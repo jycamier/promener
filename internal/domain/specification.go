@@ -4,10 +4,9 @@ import "fmt"
 
 // Specification represents the complete metrics specification (like OpenAPI spec)
 type Specification struct {
-	Version    string                `yaml:"version"`
-	Info       Info                  `yaml:"info"`
-	Services   map[string]Service    `yaml:"services"`
-	Components Components            `yaml:"components,omitempty"`
+	Version  string             `yaml:"version"`
+	Info     Info               `yaml:"info"`
+	Services map[string]Service `yaml:"services"`
 }
 
 // Info contains metadata about the metrics specification
@@ -15,11 +14,6 @@ type Info struct {
 	Title       string `yaml:"title"`
 	Description string `yaml:"description,omitempty"`
 	Version     string `yaml:"version"`
-}
-
-// Components contains reusable components (like OpenAPI components)
-type Components struct {
-	Labels map[string][]string `yaml:"labels,omitempty"`
 }
 
 // Validate checks if the specification is valid

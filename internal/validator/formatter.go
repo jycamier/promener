@@ -1,5 +1,7 @@
 package validator
 
+//go:generate mockgen -source=formatter.go -destination=mocks/mock_formatter.go -package=mocks ValidationFormatter
+
 import (
 	"encoding/json"
 	"fmt"
@@ -14,10 +16,18 @@ const (
 	FormatJSON OutputFormat = "json"
 )
 
+// ValidationFormatter is the interface for formatting validation results.
+type ValidationFormatter interface {
+	Format(result *ValidationResult) (string, error)
+}
+
 // Formatter formats validation results for display.
 type Formatter struct {
 	format OutputFormat
 }
+
+// Ensure Formatter implements ValidationFormatter
+var _ ValidationFormatter = (*Formatter)(nil)
 
 // NewFormatter creates a new formatter with the specified output format.
 func NewFormatter(format OutputFormat) *Formatter {

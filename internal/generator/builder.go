@@ -105,3 +105,18 @@ func (b *CommonTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 		NeedsHelperFunc: needsHelper,
 	}
 }
+
+// EnrichMetrics applies a transformation function to all metrics in the template data.
+// This helper reduces code duplication across language-specific builders.
+func (b *CommonTemplateDataBuilder) EnrichMetrics(data *TemplateData, enrichFunc func(metric *MetricData) error) error {
+	for i := range data.Namespaces {
+		for j := range data.Namespaces[i].Subsystems {
+			for k := range data.Namespaces[i].Subsystems[j].Metrics {
+				if err := enrichFunc(&data.Namespaces[i].Subsystems[j].Metrics[k]); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}

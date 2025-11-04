@@ -75,18 +75,3 @@ func (v *Validation) Validate(value string) error {
 
 	return nil
 }
-
-// ValidateLabelValue validates a label value against all its validation rules
-func ValidateLabelValue(label *LabelDefinition, value string) error {
-	for _, validationExpr := range label.Validations {
-		validation, err := ParseValidation(validationExpr)
-		if err != nil {
-			return fmt.Errorf("invalid validation expression for label '%s': %w", label.Name, err)
-		}
-
-		if err := validation.Validate(value); err != nil {
-			return fmt.Errorf("validation failed for label '%s': %w", label.Name, err)
-		}
-	}
-	return nil
-}

@@ -60,7 +60,7 @@ func TestValidator_Validate_InvalidCUE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	// Write invalid CUE
 	invalidCUE := `
@@ -76,7 +76,7 @@ services: {}
 	if _, err := tmpFile.WriteString(invalidCUE); err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	v := New()
 	result, err := v.Validate(tmpFile.Name())
@@ -97,7 +97,7 @@ func TestValidator_Validate_MissingVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	// CUE without version
 	cueContent := `
@@ -120,7 +120,7 @@ services: {
 	if _, err := tmpFile.WriteString(cueContent); err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	v := New()
 	_, err = v.Validate(tmpFile.Name())

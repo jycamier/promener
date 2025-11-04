@@ -11,9 +11,13 @@ import (
 //go:embed templates/nodejs/*.gotmpl
 var nodejsTemplatesFS embed.FS
 
+// NodeJSGenerator generates Node.js/TypeScript code for Prometheus metrics
 type NodeJSGenerator struct {
 	generator *Generator
 }
+
+// Ensure NodeJSGenerator implements MetricsGenerator
+var _ MetricsGenerator = (*NodeJSGenerator)(nil)
 
 func NewNodeJSGenerator(packageName string, outputPath string) (*NodeJSGenerator, error) {
 	builder := NewNodeJSTemplateDataBuilder()

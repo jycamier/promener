@@ -1,6 +1,7 @@
 package htmlgen
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -206,13 +207,13 @@ func (g *Generator) Generate(spec *domain.Specification) ([]byte, error) {
 	}
 	data.ServicesJSON = template.JS(jsonData)
 
-	var buf []byte
-	w := &bytesWriter{buf: &buf}
-	if err := g.tmpl.Execute(w, data); err != nil {
+	// Use bytes.Buffer directly instead of custom bytesWriter
+	var buf bytes.Buffer
+	if err := g.tmpl.Execute(&buf, data); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	return buf, nil
+	return buf.Bytes(), nil
 }
 
 // GenerateFile generates HTML and writes to a file
@@ -227,14 +228,4 @@ func (g *Generator) GenerateFile(spec *domain.Specification, outputPath string) 
 	}
 
 	return nil
-}
-
-// bytesWriter wraps a byte slice to implement io.Writer
-type bytesWriter struct {
-	buf *[]byte
-}
-
-func (w *bytesWriter) Write(p []byte) (n int, err error) {
-	*w.buf = append(*w.buf, p...)
-	return len(p), nil
 }
