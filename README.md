@@ -432,6 +432,92 @@ ConstLabels: prometheus.Labels{
 }
 ```
 
+### Inherited Labels
+
+Inherited labels are labels **owned and managed by infrastructure**, not by your application code. These labels are injected by infrastructure components such as:
+- Prometheus relabeling rules
+- Service mesh sidecars (Istio, Linkerd)
+- Kubernetes operators or admission controllers
+- Cloud provider metadata services
+- Observability platforms (Datadog, Grafana Agent)
+
+Common examples include:
+- `cluster`: Kubernetes cluster name
+- `region`, `zone`: Cloud provider location
+- `pod`, `namespace`, `node`: Kubernetes metadata
+- `instance`: Service instance identifier
+- `env`, `datacenter`: Infrastructure-level environment identifiers
+
+#### Why Document Inherited Labels?
+
+While your application doesn't set these labels, documenting them is crucial because:
+1. **Clear ownership**: Makes it explicit which labels are application vs infrastructure responsibility
+2. **Query awareness**: Developers need to know all available labels for PromQL queries
+3. **Cardinality planning**: Inherited labels affect metric cardinality and storage costs
+4. **Documentation completeness**: Generated docs show the complete label set for each metric
+
+#### Defining Inherited Labels
+
+Use the `inherited` field to document the infrastructure mechanism responsible for the label:
+
+```cue
+metrics: {
+    http_requests_total: {
+        namespace: "http"
+        subsystem: "server"
+        type:      "counter"
+        help:      "Total HTTP requests"
+        labels: {
+            // Application labels (set in code, validated at runtime)
+            method: {
+                description: "HTTP method"
+                validations: [
+                    "value in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']",
+                ]
+            }
+            status: {
+                description: "HTTP status code"
+                validations: [
+                    "value.matches('^[1-5][0-9]{2}$')",
+                ]
+            }
+            // Infrastructure labels (injected by infrastructure, no validation)
+            cluster: {
+                description: "Kubernetes cluster name"
+                inherited:   "Injected via Prometheus relabeling from kubernetes_sd_config metadata"
+            }
+            region: {
+                description: "Cloud provider region"
+                inherited:   "Added by infrastructure relabeling using EC2 instance metadata"
+            }
+            mesh_version: {
+                description: "Service mesh version"
+                inherited:   "Injected by Istio sidecar proxy"
+            }
+        }
+    }
+}
+```
+
+**Note**: Inherited labels should NOT have `validations` since they are controlled by infrastructure, not your application.
+
+#### Generated Code Behavior
+
+**Application labels** (without `inherited`) are included in generated method signatures:
+```go
+// Only application labels (method, status) appear as parameters
+metrics.Http.Server.IncRequestsTotal("GET", "200")
+// Infrastructure labels (cluster, region, mesh_version) are added by infrastructure
+```
+
+**Inherited labels** are excluded from method signatures but remain part of the metric definition for documentation and query purposes.
+
+#### HTML Documentation
+
+In the generated HTML documentation, labels are organized into two groups:
+- **Application**: Labels your code sets directly (your responsibility)
+- **Infrastructure**: Inherited labels with explanations of their injection mechanism (infrastructure team responsibility)
+
 ### Dependency Injection with Uber FX
 
 When using `--fx`, Promener generates an FX module with interfaces for easy testing:
