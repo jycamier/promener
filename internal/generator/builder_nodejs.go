@@ -37,13 +37,15 @@ func (b *NodeJSTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 			metric.NodeJSType = "Summary"
 		}
 
-		// Build method parameters for dynamic labels
+		// Build method parameters for dynamic labels (excluding inherited labels)
 		var params []string
 		var args []string
-		for _, label := range metric.Labels {
-			paramName := toLowerCamelCase(label)
-			params = append(params, fmt.Sprintf("%s: string", paramName))
-			args = append(args, paramName)
+		for _, labelDef := range metric.LabelDefinitions {
+			if !labelDef.IsInherited() {
+				paramName := toLowerCamelCase(labelDef.Name)
+				params = append(params, fmt.Sprintf("%s: string", paramName))
+				args = append(args, paramName)
+			}
 		}
 		metric.NodeJSMethodParams = strings.Join(params, ", ")
 		metric.NodeJSMethodArgs = strings.Join(args, ", ")

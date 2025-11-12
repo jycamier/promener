@@ -687,10 +687,6 @@ metrics: {
 
 See the [example](testdata/with_cue_mod) directory for complete examples.
 
-## License
-
-MIT
-
 ## TODO
 
 - [x] Standardize histogram buckets by business domain (e.g., HTTP latency, DB query duration, queue processing time)

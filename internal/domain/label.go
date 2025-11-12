@@ -11,6 +11,7 @@ type LabelDefinition struct {
 	Name        string   `yaml:"name,omitempty"`
 	Description string   `yaml:"description,omitempty"`
 	Validations []string `yaml:"validations,omitempty"`
+	Inherited   string   `yaml:"inherited,omitempty"` // Documentation for labels added via relabeling
 }
 
 // Labels can be either a simple array of strings or a map with descriptions
@@ -43,6 +44,7 @@ func (l *Labels) UnmarshalYAML(value *yaml.Node) error {
 			var detail struct {
 				Description string   `yaml:"description"`
 				Validations []string `yaml:"validations,omitempty"`
+				Inherited   string   `yaml:"inherited,omitempty"`
 			}
 			if err := valueNode.Decode(&detail); err != nil {
 				return fmt.Errorf("invalid label definition for %s: %w", name, err)
@@ -52,6 +54,7 @@ func (l *Labels) UnmarshalYAML(value *yaml.Node) error {
 				Name:        name,
 				Description: detail.Description,
 				Validations: detail.Validations,
+				Inherited:   detail.Inherited,
 			})
 		}
 		return nil
@@ -65,6 +68,33 @@ func (l Labels) ToStringSlice() []string {
 	result := make([]string, len(l))
 	for i, label := range l {
 		result[i] = label.Name
+	}
+	return result
+}
+
+// IsInherited returns true if the label is inherited (added via relabeling)
+func (ld LabelDefinition) IsInherited() bool {
+	return ld.Inherited != ""
+}
+
+// NonInheritedLabels returns only labels that are not inherited
+func (l Labels) NonInheritedLabels() Labels {
+	result := make(Labels, 0, len(l))
+	for _, label := range l {
+		if !label.IsInherited() {
+			result = append(result, label)
+		}
+	}
+	return result
+}
+
+// InheritedLabels returns only labels that are inherited
+func (l Labels) InheritedLabels() Labels {
+	result := make(Labels, 0, len(l))
+	for _, label := range l {
+		if label.IsInherited() {
+			result = append(result, label)
+		}
 	}
 	return result
 }

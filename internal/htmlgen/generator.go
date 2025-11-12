@@ -39,6 +39,7 @@ type MetricJSON struct {
 type LabelJSON struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
+	Inherited   string `json:"inherited,omitempty"`
 }
 
 // ConstLabelJSON represents a constant label for JSON serialization
@@ -125,6 +126,7 @@ func convertMetricToJSON(key string, metric domain.Metric) MetricJSON {
 		m.Labels = append(m.Labels, LabelJSON{
 			Name:        label.Name,
 			Description: label.Description,
+			Inherited:   label.Inherited,
 		})
 	}
 

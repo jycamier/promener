@@ -58,13 +58,15 @@ func (b *GoTemplateDataBuilder) BuildTemplateData(spec *domain.Specification, pa
 			metric.Constructor = "prometheus.New" + metric.SimpleType + "Vec"
 		}
 
-		// Build method parameters and arguments
+		// Build method parameters and arguments (excluding inherited labels)
 		var params []string
 		var args []string
-		for _, label := range metric.Labels {
-			paramName := escapeGoKeyword(toLowerCamelCase(label))
-			params = append(params, fmt.Sprintf("%s string", paramName))
-			args = append(args, paramName)
+		for _, labelDef := range metric.LabelDefinitions {
+			if !labelDef.IsInherited() {
+				paramName := escapeGoKeyword(toLowerCamelCase(labelDef.Name))
+				params = append(params, fmt.Sprintf("%s string", paramName))
+				args = append(args, paramName)
+			}
 		}
 		metric.MethodParams = strings.Join(params, ", ")
 		metric.MethodArgs = strings.Join(args, ", ")

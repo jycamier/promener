@@ -52,7 +52,7 @@ func (b *CommonTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 				Subsystem:        metric.Subsystem,
 				Type:             string(metric.Type),
 				Help:             metric.Help,
-				Labels:           metric.GetLabelNames(),
+				Labels:           metric.Labels.NonInheritedLabels().ToStringSlice(),
 				LabelDefinitions: metric.Labels,
 				Buckets:          metric.Buckets,
 				Objectives:       metric.Objectives,

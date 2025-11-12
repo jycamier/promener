@@ -4,6 +4,6 @@ language: {
 }
 deps: {
 	"github.com/jycamier/promener-standards@v0": {
-		v: "v0.0.2"
+		v: "v0.0.3"
 	}
 }

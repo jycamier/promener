@@ -40,10 +40,12 @@ func (b *DotNetTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 
 		var params []string
 		var args []string
-		for _, label := range metric.Labels {
-			paramName := toLowerCamelCase(label)
-			params = append(params, fmt.Sprintf("string %s", paramName))
-			args = append(args, paramName)
+		for _, labelDef := range metric.LabelDefinitions {
+			if !labelDef.IsInherited() {
+				paramName := toLowerCamelCase(labelDef.Name)
+				params = append(params, fmt.Sprintf("string %s", paramName))
+				args = append(args, paramName)
+			}
 		}
 		metric.DotNetMethodParams = strings.Join(params, ", ")
 		metric.DotNetMethodArgs = strings.Join(args, ", ")

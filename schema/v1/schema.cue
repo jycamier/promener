@@ -35,6 +35,7 @@ package v1
 	labels?: [string]: {
 		description: string
 		validations?: [...string]
+		inherited?: string
 	}
 	constLabels?: [string]: {
 		value:       string
