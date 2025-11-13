@@ -1,3 +1,4 @@
+
 <div style="display: flex; justify-content: center;">
   <img src="docs/img/logo.png" alt="small" width="300"/>
 </div>
@@ -5,6 +6,11 @@
 **Promener** (from French "promener" - to walk through/explore) addresses a critical gap in observability: **the lack of structured, maintained documentation for Prometheus metrics**.
 
 <img src="docs/img/promener.png" alt="small" width="300"/>
+
+
+> [!WARNING]
+> This project is **experimental**. APIs, behavior, and structure may change without notice.
+
 
 ## The Problem
 
@@ -86,38 +92,37 @@ From this spec, Promener generates:
 
 ## Installation
 
-### Option 1: Install as CLI tool
+### With Homebrew
+
+```bash
+brew tap jycamier/homebrew-tap
+brew install promener
+```
+
+### With Go
 
 ```bash
 go install github.com/jycamier/promener@latest
 ```
 
-Or build from source:
-
-```bash
-git clone https://github.com/jycamier/promener.git
-cd promener
-go build
-```
-
-### Option 2: Use with go:generate
+### Use with go:generate
 
 Add to your `go.mod`:
 
 ```bash
-go get github.com/jycamier/promener@latest
+go get -tool github.com/jycamier/promener@latest
 ```
 
 Then add a `//go:generate` directive to your code:
 
 ```go
-//go:generate go run github.com/jycamier/promener generate go -i metrics.cue -o metrics/ --di --fx
+//go:generate go tool github.com/jycamier/promener generate go --input metrics.cue --ouput metrics/ --di --fx
 ```
 
-Or if you prefer using the installed tool:
+Or if you prefer to run the generator directly:
 
 ```go
-//go:generate promener generate go -i metrics.cue -o metrics/ --di --fx
+//go:generate go run github.com/jycamier/promener@latest generate go --input metrics.cue --ouput metrics/ --di --fx
 ```
 
 Then run:
@@ -125,6 +130,7 @@ Then run:
 ```bash
 go generate ./...
 ```
+
 
 ## Quick Start
 
@@ -154,6 +160,10 @@ services: {
                 type:      "counter"
                 help:      "Total number of HTTP requests"
                 labels: {
+                	application: {
+                		description: "The application name"
+                		inherited:   "Injected via Prometheus relabeling from the pod label `app`"
+                	}
                     method: {
                         description: "HTTP method"
                         validations: [
