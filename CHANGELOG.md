@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/jycamier/promener/compare/v1.1.0...v1.1.1) (2025-11-13)
+
+
+### Documentation
+
+* udpate ([be4dd98](https://github.com/jycamier/promener/commit/be4dd980b7ad4dbad6108905e198bdc5b5d4ac24))
+
 ## [1.1.0](https://github.com/jycamier/promener/compare/v1.0.0...v1.1.0) (2025-11-12)
 
 
