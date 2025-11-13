@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0](https://github.com/jycamier/promener/compare/v1.0.0...v1.1.0) (2025-11-12)
+
+
+### Features
+
+* add inherited label attribute ([3f0caa2](https://github.com/jycamier/promener/commit/3f0caa24b5c6add743abed63e7b34cdb1d7e8f96))
+* add vet command ([6c51f8f](https://github.com/jycamier/promener/commit/6c51f8f8b9b56175851d499c19bcdd2ca02d412e))
+* **generator:** add CEL as validations for labels ([1d953f5](https://github.com/jycamier/promener/commit/1d953f5aa7b17c6c8e211b8ad26f6efef0caeb9a))
+* use cuelang as the source schema of every commands ([c588d40](https://github.com/jycamier/promener/commit/c588d4011ef08bebb2861e1c7ef67389d2ecc69f))
+
+
+### Documentation
+
+* inherited attribute label ([abeef9b](https://github.com/jycamier/promener/commit/abeef9b24bbc27ad3b2ff92d88df7183e8f9cc34))
+* update docs ([f914141](https://github.com/jycamier/promener/commit/f91414162dd131a764bace6b3e4e762c43bb6308))
+
 ## 1.0.0 (2025-10-27)
 
 
