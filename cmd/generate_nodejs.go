@@ -12,17 +12,19 @@ import (
 
 var (
 	nodejsPackageName string
+	nodejsProvider    = generator.ProviderPrometheus // default to prometheus
 )
 
 // nodejsCmd represents the nodejs command
 var nodejsCmd = &cobra.Command{
 	Use:   "nodejs",
-	Short: "Generate Node.js code for Prometheus metrics",
-	Long: `Generate Node.js/TypeScript code for Prometheus metrics from a CUE specification file.
-Generates metrics.ts in the output directory.
+	Short: "Generate Node.js code for metrics (Prometheus or OpenTelemetry)",
+	Long: `Generate Node.js/TypeScript code for metrics from a CUE specification file.
+Generates metrics.ts or metrics_otel.ts in the output directory.
 
 Examples:
   promener generate nodejs -i metrics.cue -o ./out
+  promener generate nodejs -i metrics.cue -o ./out --provider otel
   promener generate nodejs -i metrics.cue -o ./out -p myapp`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Create output directory if it doesn't exist
@@ -50,7 +52,7 @@ Examples:
 		}
 
 		// Create Node.js generator
-		g, err := generator.NewNodeJSGenerator(packageName, outputDir)
+		g, err := generator.NewNodeJSGenerator(packageName, outputDir, nodejsProvider)
 		if err != nil {
 			return fmt.Errorf("failed to create Node.js generator: %w", err)
 		}
@@ -68,4 +70,5 @@ func init() {
 	generateCmd.AddCommand(nodejsCmd)
 
 	nodejsCmd.Flags().StringVarP(&nodejsPackageName, "package", "p", "", "Override package name (optional)")
+	nodejsCmd.Flags().Var(&nodejsProvider, "provider", "Metrics provider implementation (prometheus or otel)")
 }

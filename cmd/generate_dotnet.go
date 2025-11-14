@@ -13,17 +13,19 @@ import (
 var (
 	dotnetNamespace  string
 	dotnetGenerateDI bool
+	dotnetProvider   = generator.ProviderPrometheus // default to prometheus
 )
 
 // dotnetCmd represents the dotnet command
 var dotnetCmd = &cobra.Command{
 	Use:   "dotnet",
-	Short: "Generate .NET code for Prometheus metrics",
-	Long: `Generate .NET code for Prometheus metrics from a CUE specification file.
-Generates Metrics.cs and optionally Metrics.DependencyInjection.cs in the output directory.
+	Short: "Generate .NET code for metrics (Prometheus or OpenTelemetry)",
+	Long: `Generate .NET code for metrics from a CUE specification file.
+Generates Metrics.cs or MetricsOtel.cs and optionally MetricsExtensions.cs in the output directory.
 
 Examples:
   promener generate dotnet -i metrics.cue -o ./out
+  promener generate dotnet -i metrics.cue -o ./out --provider otel
   promener generate dotnet -i metrics.cue -o ./out --di`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Create output directory if it doesn't exist
@@ -51,7 +53,7 @@ Examples:
 		}
 
 		// Create .NET generator
-		g, err := generator.NewDotNetGenerator(packageName, outputDir)
+		g, err := generator.NewDotNetGenerator(packageName, outputDir, dotnetProvider)
 		if err != nil {
 			return fmt.Errorf("failed to create .NET generator: %w", err)
 		}
@@ -76,5 +78,6 @@ func init() {
 	generateCmd.AddCommand(dotnetCmd)
 
 	dotnetCmd.Flags().StringVarP(&dotnetNamespace, "package", "p", "", "Override namespace (optional)")
+	dotnetCmd.Flags().Var(&dotnetProvider, "provider", "Metrics provider implementation (prometheus or otel)")
 	dotnetCmd.Flags().BoolVar(&dotnetGenerateDI, "di", false, "Generate dependency injection extensions (optional)")
 }

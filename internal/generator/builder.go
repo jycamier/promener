@@ -53,7 +53,7 @@ func (b *CommonTemplateDataBuilder) BuildTemplateData(spec *domain.Specification
 				Type:             string(metric.Type),
 				Help:             metric.Help,
 				Labels:           metric.Labels.NonInheritedLabels().ToStringSlice(),
-				LabelDefinitions: metric.Labels,
+				LabelDefinitions: metric.Labels.NonInheritedLabels(), // Filter inherited labels - they're documentation only
 				Buckets:          metric.Buckets,
 				Objectives:       metric.Objectives,
 				ConstLabels:      constLabelsMap,

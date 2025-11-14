@@ -28,52 +28,9 @@ namespace {{ .PackageName }}.Metrics
 {
 {{- range $ns := .Namespaces }}
 {{- range $ss := $ns.Subsystems }}
-    /// <summary>
-    /// Interface for {{ $ns.Name }}.{{ $ss.Name }} metrics
-    /// </summary>
-    public interface I{{ $ns.Name }}{{ $ss.Name }}Metrics
-    {
-{{- range $m := $ss.Metrics }}
-{{- if eq $m.Type "counter" }}
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Increment {{ $m.Name }} by 1</summary>
-        void Inc{{ $m.MethodName }}({{ $m.DotNetMethodParams }});
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Increment {{ $m.Name }} by a specific value</summary>
-        void Add{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value);
-{{- end }}
-{{- if eq $m.Type "gauge" }}
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Set {{ $m.Name }} to a specific value</summary>
-        void Set{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value);
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Increment {{ $m.Name }} by 1</summary>
-        void Inc{{ $m.MethodName }}({{ $m.DotNetMethodParams }});
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Decrement {{ $m.Name }} by 1</summary>
-        void Dec{{ $m.MethodName }}({{ $m.DotNetMethodParams }});
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Add a value to {{ $m.Name }}</summary>
-        void Add{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value);
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Subtract a value from {{ $m.Name }}</summary>
-        void Sub{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value);
-{{- end }}
-{{- if or (eq $m.Type "histogram") (eq $m.Type "summary") }}
-{{- template "dotnetDeprecated" $m }}
-        /// <summary>Observe a value for {{ $m.Name }}</summary>
-        void Observe{{ $m.MethodName }}({{ $m.DotNetMethodParams }}{{ if $m.Labels }}, {{ end }}double value);
-{{- end }}
-{{- end }}
-    }
-{{- end }}
-{{- end }}
-
-{{- range $ns := .Namespaces }}
-{{- range $ss := $ns.Subsystems }}
 
     /// <summary>
-    /// Implementation of {{ $ns.Name }}.{{ $ss.Name }} metrics
+    /// Prometheus implementation of {{ $ns.Name }}.{{ $ss.Name }} metrics
     /// </summary>
     public class {{ $ns.Name }}{{ $ss.Name }}MetricsImpl : I{{ $ns.Name }}{{ $ss.Name }}Metrics
     {

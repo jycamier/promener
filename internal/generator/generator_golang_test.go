@@ -161,7 +161,7 @@ func TestGolangGenerator_GenerateMetrics(t *testing.T) {
 			defer func() { _ = os.RemoveAll(tmpDir) }()
 
 			// Create generator
-			gen, err := NewGolangGenerator("testpackage", tmpDir)
+			gen, err := NewGolangGenerator("testpackage", tmpDir, ProviderPrometheus)
 			if err != nil {
 				t.Fatalf("NewGolangGenerator() error = %v", err)
 			}
@@ -177,10 +177,24 @@ func TestGolangGenerator_GenerateMetrics(t *testing.T) {
 				return
 			}
 
-			// Check that metrics.go was created
-			metricsPath := filepath.Join(tmpDir, "metrics.go")
+			// Check that metrics_interface.go was created
+			interfacePath := filepath.Join(tmpDir, "metrics_interface.go")
+			if _, err := os.Stat(interfacePath); os.IsNotExist(err) {
+				t.Errorf("Expected metrics_interface.go to be created at %s", interfacePath)
+				return
+			}
+
+			// Check that metrics_validation.go was created
+			validationPath := filepath.Join(tmpDir, "metrics_validation.go")
+			if _, err := os.Stat(validationPath); os.IsNotExist(err) {
+				t.Errorf("Expected metrics_validation.go to be created at %s", validationPath)
+				return
+			}
+
+			// Check that metrics_prometheus.go was created
+			metricsPath := filepath.Join(tmpDir, "metrics_prometheus.go")
 			if _, err := os.Stat(metricsPath); os.IsNotExist(err) {
-				t.Errorf("Expected metrics.go to be created at %s", metricsPath)
+				t.Errorf("Expected metrics_prometheus.go to be created at %s", metricsPath)
 				return
 			}
 
@@ -258,7 +272,7 @@ func TestGolangGenerator_GenerateDI(t *testing.T) {
 			defer func() { _ = os.RemoveAll(tmpDir) }()
 
 			// Create generator
-			gen, err := NewGolangGenerator("testpackage", tmpDir)
+			gen, err := NewGolangGenerator("testpackage", tmpDir, ProviderPrometheus)
 			if err != nil {
 				t.Fatalf("NewGolangGenerator() error = %v", err)
 			}
@@ -274,10 +288,10 @@ func TestGolangGenerator_GenerateDI(t *testing.T) {
 				return
 			}
 
-			// Check that fx.go was created
-			fxPath := filepath.Join(tmpDir, "fx.go")
+			// Check that metrics_fx.go was created
+			fxPath := filepath.Join(tmpDir, "metrics_fx.go")
 			if _, err := os.Stat(fxPath); os.IsNotExist(err) {
-				t.Errorf("Expected fx.go to be created at %s", fxPath)
+				t.Errorf("Expected metrics_fx.go to be created at %s", fxPath)
 				return
 			}
 
@@ -327,7 +341,7 @@ func TestGolangGenerator_Creation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gen, err := NewGolangGenerator(tt.packageName, tt.outputPath)
+			gen, err := NewGolangGenerator(tt.packageName, tt.outputPath, ProviderPrometheus)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewGolangGenerator() error = %v, wantErr %v", err, tt.wantErr)
 				return
