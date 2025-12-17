@@ -68,6 +68,89 @@ services: {
 					}
 				}
 			}
+			requests_in_flight: {
+				namespace: "http"
+				subsystem: "request"
+				type:      "gauge"
+				help:      "Current number of HTTP requests being processed"
+				labels: commonLabels
+			}
+		}
+
+		goldenSignals: {
+			"http/request": {
+				latency: {
+					description: "HTTP request latency distribution"
+					metrics: ["new_metric"]
+					recordingRules: [
+						{
+							name:  "http:request:latency:p50:5m"
+							query: "histogram_quantile(0.50, sum(rate(http_request_new_metric_bucket[5m])) by (le))"
+						},
+						{
+							name:  "http:request:latency:p95:5m"
+							query: "histogram_quantile(0.95, sum(rate(http_request_new_metric_bucket[5m])) by (le))"
+						},
+						{
+							name:  "http:request:latency:p99:5m"
+							query: "histogram_quantile(0.99, sum(rate(http_request_new_metric_bucket[5m])) by (le))"
+						},
+					]
+					thresholds: {
+						good:     "< 100ms"
+						warning:  "< 500ms"
+						critical: ">= 500ms"
+					}
+				}
+				errors: {
+					description: "HTTP error rate (5xx responses)"
+					metrics: ["new_metric"]
+					recordingRules: [
+						{
+							name:  "http:request:errors:ratio:5m"
+							query: "sum(rate(http_request_new_metric_count{status=~\"5..\"}[5m])) / sum(rate(http_request_new_metric_count[5m]))"
+						},
+					]
+					thresholds: {
+						good:     "< 0.1%"
+						warning:  "< 1%"
+						critical: ">= 1%"
+					}
+				}
+				traffic: {
+					description: "HTTP request throughput"
+					metrics: ["new_metric"]
+					recordingRules: [
+						{
+							name:  "http:request:traffic:rate:5m"
+							query: "sum(rate(http_request_new_metric_count[5m]))"
+						},
+						{
+							name:  "http:request:traffic:rate:5m:by_method"
+							query: "sum(rate(http_request_new_metric_count[5m])) by (method)"
+						},
+					]
+				}
+				saturation: {
+					description: "Current load on the HTTP server - high values indicate potential bottlenecks"
+					metrics: ["requests_in_flight"]
+					recordingRules: [
+						{
+							name:  "http:request:saturation:in_flight"
+							query: "sum(http_request_requests_in_flight)"
+						},
+						{
+							name:  "http:request:saturation:in_flight:max_1h"
+							query: "max_over_time(sum(http_request_requests_in_flight)[1h:])"
+						},
+					]
+					thresholds: {
+						good:     "< 100"
+						warning:  "< 500"
+						critical: ">= 500"
+					}
+				}
+			}
 		}
 	}
 }
