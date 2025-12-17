@@ -1,5 +1,9 @@
 package v1
 
+// =============================================================================
+// Common definitions
+// =============================================================================
+
 #Info: {
 	title:        string
 	description?: string
@@ -11,6 +15,10 @@ package v1
 	url:         string
 	description: string
 }
+
+// =============================================================================
+// Metrics definitions
+// =============================================================================
 
 #PromQLExample: {
 	query:       string
@@ -49,12 +57,70 @@ package v1
 	}
 }
 
+// =============================================================================
+// Golden Signals definitions
+// =============================================================================
+
+#RecordingRule: {
+	// Name of the recording rule (will be used as metric name)
+	name: string
+
+	// PromQL query
+	query: string
+}
+
+#Thresholds: {
+	// Value considered good (green)
+	good: string
+
+	// Value considered warning (yellow)
+	warning?: string
+
+	// Value considered critical (red)
+	critical: string
+}
+
+#GoldenSignal: {
+	// What this signal measures
+	description: string
+
+	// References to metric names defined in this service
+	metrics: [...string]
+
+	// Pre-computed recording rules for dashboards
+	recordingRules?: [...#RecordingRule]
+
+	// Thresholds for dashboard visualization
+	thresholds?: #Thresholds
+}
+
+#GoldenSignals: {
+	// Latency: How long it takes to service a request
+	latency?: #GoldenSignal
+
+	// Errors: The rate of requests that fail
+	errors?: #GoldenSignal
+
+	// Traffic: How much demand is being placed on your system
+	traffic?: #GoldenSignal
+
+	// Saturation: How "full" your service is
+	saturation?: #GoldenSignal
+}
+
+// =============================================================================
+// Root schema
+// =============================================================================
+
 #Promener: {
 	version: string | *"1.0"
 	info:    #Info
 	services?: [string]: {
-		info: #Info
+		info:    #Info
 		servers?: [...#Server]
 		metrics: [string]: #Metric
+
+		// Golden Signals by topic (http, database, cache, queue, etc.)
+		goldenSignals?: [string]: #GoldenSignals
 	}
 }

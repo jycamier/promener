@@ -8,7 +8,8 @@ type Server struct {
 
 // Service represents a microservice with its own metrics
 type Service struct {
-	Info    Info              `yaml:"info"`
-	Servers []Server          `yaml:"servers,omitempty"`
-	Metrics map[string]Metric `yaml:"metrics"`
+	Info          Info                      `yaml:"info"`
+	Servers       []Server                  `yaml:"servers,omitempty"`
+	Metrics       map[string]Metric         `yaml:"metrics"`
+	GoldenSignals map[string]GoldenSignals  `yaml:"goldenSignals,omitempty"` // topic -> signals (http, database, cache, etc.)
 }
