@@ -76,12 +76,42 @@ type ServerJSON struct {
 	Description string `json:"description,omitempty"`
 }
 
+// RecordingRuleJSON represents a Prometheus recording rule for JSON serialization
+type RecordingRuleJSON struct {
+	Name  string `json:"name"`
+	Query string `json:"query"`
+}
+
+// ThresholdsJSON represents threshold values for JSON serialization
+type ThresholdsJSON struct {
+	Good     string `json:"good"`
+	Warning  string `json:"warning,omitempty"`
+	Critical string `json:"critical"`
+}
+
+// GoldenSignalJSON represents one golden signal for JSON serialization
+type GoldenSignalJSON struct {
+	Description    string              `json:"description"`
+	Metrics        []string            `json:"metrics"`
+	RecordingRules []RecordingRuleJSON `json:"recordingRules,omitempty"`
+	Thresholds     *ThresholdsJSON     `json:"thresholds,omitempty"`
+}
+
+// GoldenSignalsJSON groups the four golden signals for JSON serialization
+type GoldenSignalsJSON struct {
+	Latency    *GoldenSignalJSON `json:"latency,omitempty"`
+	Errors     *GoldenSignalJSON `json:"errors,omitempty"`
+	Traffic    *GoldenSignalJSON `json:"traffic,omitempty"`
+	Saturation *GoldenSignalJSON `json:"saturation,omitempty"`
+}
+
 // ServiceJSON represents a service for JSON serialization
 type ServiceJSON struct {
-	Name        string       `json:"name"`
-	Info        domain.Info  `json:"info"`
-	Servers     []ServerJSON `json:"servers,omitempty"`
-	Metrics     []MetricJSON `json:"metrics"`
+	Name          string                        `json:"name"`
+	Info          domain.Info                   `json:"info"`
+	Servers       []ServerJSON                  `json:"servers,omitempty"`
+	Metrics       []MetricJSON                  `json:"metrics"`
+	GoldenSignals map[string]GoldenSignalsJSON  `json:"goldenSignals,omitempty"` // topic -> signals
 }
 
 // TemplateData contains data for the HTML template
@@ -173,6 +203,47 @@ func convertMetricToJSON(key string, metric domain.Metric) MetricJSON {
 	return m
 }
 
+// convertGoldenSignalToJSON converts a domain golden signal to JSON representation
+func convertGoldenSignalToJSON(signal *domain.GoldenSignal) *GoldenSignalJSON {
+	if signal == nil {
+		return nil
+	}
+
+	gs := &GoldenSignalJSON{
+		Description: signal.Description,
+		Metrics:     signal.Metrics,
+	}
+
+	// Convert recording rules
+	for _, rule := range signal.RecordingRules {
+		gs.RecordingRules = append(gs.RecordingRules, RecordingRuleJSON{
+			Name:  rule.Name,
+			Query: rule.Query,
+		})
+	}
+
+	// Convert thresholds
+	if signal.Thresholds != nil {
+		gs.Thresholds = &ThresholdsJSON{
+			Good:     signal.Thresholds.Good,
+			Warning:  signal.Thresholds.Warning,
+			Critical: signal.Thresholds.Critical,
+		}
+	}
+
+	return gs
+}
+
+// convertGoldenSignalsToJSON converts domain golden signals to JSON representation
+func convertGoldenSignalsToJSON(signals domain.GoldenSignals) GoldenSignalsJSON {
+	return GoldenSignalsJSON{
+		Latency:    convertGoldenSignalToJSON(signals.Latency),
+		Errors:     convertGoldenSignalToJSON(signals.Errors),
+		Traffic:    convertGoldenSignalToJSON(signals.Traffic),
+		Saturation: convertGoldenSignalToJSON(signals.Saturation),
+	}
+}
+
 // Generate generates HTML documentation from a specification
 func (g *Generator) Generate(spec *domain.Specification) ([]byte, error) {
 	var data TemplateData
@@ -196,6 +267,14 @@ func (g *Generator) Generate(spec *domain.Specification) ([]byte, error) {
 		// Convert metrics
 		for key, metric := range service.Metrics {
 			svc.Metrics = append(svc.Metrics, convertMetricToJSON(key, metric))
+		}
+
+		// Convert golden signals
+		if len(service.GoldenSignals) > 0 {
+			svc.GoldenSignals = make(map[string]GoldenSignalsJSON)
+			for topic, signals := range service.GoldenSignals {
+				svc.GoldenSignals[topic] = convertGoldenSignalsToJSON(signals)
+			}
 		}
 
 		services = append(services, svc)
