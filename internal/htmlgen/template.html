@@ -355,15 +355,30 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Labels -->
-                                            <div x-show="expanded && metric.labels && metric.labels.length > 0" x-collapse class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                                <h5 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Labels</h5>
+                                            <!-- Application Labels -->
+                                            <div x-show="expanded && metric.labels && metric.labels.filter(l => !l.inherited).length > 0" x-collapse class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                                <h5 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Application Labels</h5>
                                                 <div class="space-y-2">
-                                                    <template x-for="label in metric.labels" :key="label.name">
+                                                    <template x-for="label in metric.labels.filter(l => !l.inherited)" :key="label.name">
                                                         <div class="flex items-start gap-2">
                                                             <code class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-800 dark:text-gray-200" x-text="label.name"></code>
                                                             <span class="text-sm text-gray-600 dark:text-gray-400" x-text="label.description"></span>
-                                                            <span x-show="label.inherited" class="text-xs text-blue-500 dark:text-blue-400 italic" x-text="'(' + label.inherited + ')'"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+
+                                            <!-- Inherited Labels -->
+                                            <div x-show="expanded && metric.labels && metric.labels.filter(l => l.inherited).length > 0" x-collapse class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                                <h5 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Inherited Labels</h5>
+                                                <div class="space-y-2">
+                                                    <template x-for="label in metric.labels.filter(l => l.inherited)" :key="label.name">
+                                                        <div class="flex flex-col gap-1">
+                                                            <div class="flex items-start gap-2">
+                                                                <code class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-800 dark:text-gray-200" x-text="label.name"></code>
+                                                                <span class="text-sm text-gray-600 dark:text-gray-400" x-text="label.description"></span>
+                                                            </div>
+                                                            <span class="text-xs text-purple-500 dark:text-purple-400 italic ml-1" x-text="label.inherited"></span>
                                                         </div>
                                                     </template>
                                                 </div>
