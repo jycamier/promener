@@ -101,6 +101,52 @@ services: {
 				if metric.Name != "test_metric" {
 					t.Errorf("Metric.Name = %q, want %q", metric.Name, "test_metric")
 				}
+
+				// Full name should be namespace_subsystem_name
+				if metric.FullName() != "app_test_test_metric" {
+					t.Errorf("Metric.FullName() = %q, want %q", metric.FullName(), "app_test_test_metric")
+				}
+			},
+		},
+		{
+			name: "explicit name overrides map key",
+			cueContent: `
+version: "1.0.0"
+info: {
+	title: "Test"
+	version: "1.0.0"
+}
+services: {
+	default: {
+		info: {
+			title: "Default Service"
+			version: "1.0.0"
+		}
+		metrics: {
+			my_cue_key: {
+				name: "requests_total"
+				namespace: "http"
+				subsystem: "server"
+				type: "counter"
+				help: "Total HTTP requests"
+			}
+		}
+	}
+}`,
+			wantErr: false,
+			checks: func(t *testing.T, spec *domain.Specification) {
+				service := spec.Services["default"]
+				metric := service.Metrics["my_cue_key"]
+
+				// Explicit name should be preserved, not overwritten by map key
+				if metric.Name != "requests_total" {
+					t.Errorf("Metric.Name = %q, want %q", metric.Name, "requests_total")
+				}
+
+				// Full name should use the explicit name
+				if metric.FullName() != "http_server_requests_total" {
+					t.Errorf("Metric.FullName() = %q, want %q", metric.FullName(), "http_server_requests_total")
+				}
 			},
 		},
 		{

@@ -36,6 +36,9 @@ package v1
 }
 
 #Metric: {
+	// Explicit metric name. If not provided, the CUE map key will be used.
+	// The full metric name will be: namespace_subsystem_name
+	name?:      string
 	namespace:  string
 	subsystem?: string
 	type:       "counter" | "gauge" | "histogram" | "summary"
