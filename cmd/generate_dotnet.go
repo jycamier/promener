@@ -8,6 +8,7 @@ import (
 	"github.com/jycamier/promener/internal/generator"
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -26,6 +27,12 @@ Examples:
   promener generate dotnet -i metrics.cue -o ./out
   promener generate dotnet -i metrics.cue -o ./out --di`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Get values from Viper
+		inputFile := viper.GetString("input")
+		outputDir := viper.GetString("output")
+		packageName := viper.GetString("dotnet.package")
+		di := viper.GetBool("dotnet.di")
+
 		// Create output directory if it doesn't exist
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
@@ -45,7 +52,6 @@ Examples:
 		}
 
 		// Determine package name
-		packageName := dotnetNamespace
 		if packageName == "" {
 			packageName = filepath.Base(outputDir)
 		}
@@ -62,7 +68,7 @@ Examples:
 		}
 
 		// Generate DI extensions if requested
-		if dotnetGenerateDI {
+		if di {
 			if err := g.GenerateDI(spec); err != nil {
 				return fmt.Errorf("failed to generate DI extensions: %w", err)
 			}
@@ -77,4 +83,7 @@ func init() {
 
 	dotnetCmd.Flags().StringVarP(&dotnetNamespace, "package", "p", "", "Override namespace (optional)")
 	dotnetCmd.Flags().BoolVar(&dotnetGenerateDI, "di", false, "Generate dependency injection extensions (optional)")
+
+	viper.BindPFlag("dotnet.package", dotnetCmd.Flags().Lookup("package"))
+	viper.BindPFlag("dotnet.di", dotnetCmd.Flags().Lookup("di"))
 }

@@ -2,9 +2,14 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -38,9 +43,38 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
+	cobra.OnInitialize(initConfig)
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.promener.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .promener.yaml)")
+}
+
+func initConfig() {
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+	} else {
+		// Search config in current directory and parents up to HOME
+		curr, _ := os.Getwd()
+		home, _ := os.UserHomeDir()
+
+		for {
+			viper.AddConfigPath(curr)
+			if curr == home || curr == filepath.Dir(curr) {
+				break
+			}
+			curr = filepath.Dir(curr)
+		}
+
+		viper.SetConfigType("yaml")
+		viper.SetConfigName(".promener")
+	}
+
+	viper.SetEnvPrefix("promener")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
+	viper.AutomaticEnv() // read in environment variables that match
+
+	// If a config file is found, read it in.
+	if err := viper.ReadInConfig(); err == nil {
+		// Optional: fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
 }

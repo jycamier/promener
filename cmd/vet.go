@@ -6,13 +6,14 @@ import (
 
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var vetFormat string
 
 // vetCmd represents the vet command
 var vetCmd = &cobra.Command{
-	Use:   "vet <file.cue>",
+	Use:   "vet [file.cue]",
 	Short: "Validate a Promener CUE specification",
 	Long: `Validate a Promener metrics specification file written in CUE.
 
@@ -30,20 +31,35 @@ Examples:
   # Validate with text output
   promener vet metrics.cue
 
+  # Use input from config file
+  promener vet
+
   # Validate with JSON output for CI/CD
   promener vet metrics.cue --format json
 
   # Exit codes:
   #   0 - validation passed
   #   1 - validation failed`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cuePath := args[0]
+		var cuePath string
+		if len(args) > 0 {
+			cuePath = args[0]
+		} else {
+			cuePath = viper.GetString("input")
+		}
+
+		if cuePath == "" {
+			return fmt.Errorf("input file is required (as argument, via --input flag or config file)")
+		}
+
+		// Get format from viper
+		formatStr := viper.GetString("vet.format")
 
 		// Validate format
-		format := validator.OutputFormat(vetFormat)
+		format := validator.OutputFormat(formatStr)
 		if format != validator.FormatText && format != validator.FormatJSON {
-			return fmt.Errorf("invalid format: %s (must be 'text' or 'json')", vetFormat)
+			return fmt.Errorf("invalid format: %s (must be 'text' or 'json')", formatStr)
 		}
 
 		// Create validator and perform validation
@@ -89,4 +105,6 @@ func init() {
 
 	// Define flags
 	vetCmd.Flags().StringVarP(&vetFormat, "format", "f", "text", "Output format: text or json")
+
+	viper.BindPFlag("vet.format", vetCmd.Flags().Lookup("format"))
 }

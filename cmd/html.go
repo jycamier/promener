@@ -15,6 +15,7 @@ import (
 	"github.com/jycamier/promener/internal/signals"
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -107,29 +108,36 @@ Examples:
   promener html -i metrics.cue -o docs/metrics.html --watch 5s
   promener html -i api.cue -i users.cue -o docs/metrics.html --watch 5s`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(htmlInputFiles) == 0 {
-			return fmt.Errorf("at least one input file is required")
+		inputFiles := viper.GetStringSlice("html.input")
+		outputFile := viper.GetString("html.output")
+		watch := viper.GetDuration("html.watch")
+
+		if len(inputFiles) == 0 {
+			return fmt.Errorf("at least one input file is required (via --input flag or config file)")
+		}
+		if outputFile == "" {
+			return fmt.Errorf("output file is required (via --output flag or config file)")
 		}
 
 		generateHTML := func() error {
 			// Load all specifications
 			var builder *htmlgen.Builder
 
-			if len(htmlInputFiles) == 1 {
+			if len(inputFiles) == 1 {
 				// Single file or URI: use simple generation
-				spec, err := loadSpecFromInput(htmlInputFiles[0])
+				spec, err := loadSpecFromInput(inputFiles[0])
 				if err != nil {
 					return fmt.Errorf("failed to load spec: %w", err)
 				}
 
 				generator := htmlgen.NewGenerator()
-				if err := generator.GenerateFile(spec, htmlOutputFile); err != nil {
+				if err := generator.GenerateFile(spec, outputFile); err != nil {
 					return fmt.Errorf("failed to generate HTML: %w", err)
 				}
 			} else {
 				builder = htmlgen.NewBuilder("Aggregated Metrics", "1.0.0")
 
-				for _, inputFile := range htmlInputFiles {
+				for _, inputFile := range inputFiles {
 					spec, err := loadSpecFromInput(inputFile)
 					if err != nil {
 						return fmt.Errorf("failed to load spec %s: %w", inputFile, err)
@@ -137,7 +145,7 @@ Examples:
 					builder.AddFromSpec(spec)
 				}
 
-				if err := builder.Build(htmlOutputFile); err != nil {
+				if err := builder.Build(outputFile); err != nil {
 					return fmt.Errorf("failed to generate HTML: %w", err)
 				}
 			}
@@ -149,18 +157,18 @@ Examples:
 		if err := generateHTML(); err != nil {
 			return err
 		}
-		fmt.Printf("✓ Generated HTML documentation: %s\n", htmlOutputFile)
+		fmt.Printf("✓ Generated HTML documentation: %s\n", outputFile)
 
 		// Watch mode
-		if htmlWatch > 0 {
-			fmt.Printf("👀 Watching for changes (every %s)... Press Ctrl+C to stop\n", htmlWatch)
+		if watch > 0 {
+			fmt.Printf("👀 Watching for changes (every %s)... Press Ctrl+C to stop\n", watch)
 
 			// Setup context with signal handling for graceful shutdown
 			// Uses platform-specific signals (Unix: SIGINT+SIGTERM, Windows: only SIGINT)
 			ctx, stop := signal.NotifyContext(context.Background(), signals.Shutdown()...)
 			defer stop()
 
-			ticker := time.NewTicker(htmlWatch)
+			ticker := time.NewTicker(watch)
 			defer ticker.Stop()
 
 			for {
@@ -173,7 +181,7 @@ Examples:
 						fmt.Printf("⚠ Error regenerating HTML: %v\n", err)
 						continue
 					}
-					fmt.Printf("✓ Regenerated HTML documentation: %s (%s)\n", htmlOutputFile, time.Now().Format("15:04:05"))
+					fmt.Printf("✓ Regenerated HTML documentation: %s (%s)\n", outputFile, time.Now().Format("15:04:05"))
 				}
 			}
 		}
@@ -185,10 +193,11 @@ Examples:
 func init() {
 	rootCmd.AddCommand(htmlCmd)
 
-	htmlCmd.Flags().StringSliceVarP(&htmlInputFiles, "input", "i", []string{}, "Input CUE specification (file path or URI) - can be specified multiple times (required)")
-	htmlCmd.Flags().StringVarP(&htmlOutputFile, "output", "o", "", "Output HTML file (required)")
+	htmlCmd.Flags().StringSliceVarP(&htmlInputFiles, "input", "i", []string{}, "Input CUE specification (file path or URI) - can be specified multiple times")
+	htmlCmd.Flags().StringVarP(&htmlOutputFile, "output", "o", "", "Output HTML file")
 	htmlCmd.Flags().DurationVar(&htmlWatch, "watch", 0, "Watch for changes and regenerate (e.g., 5s, 1m)")
 
-	htmlCmd.MarkFlagRequired("input")
-	htmlCmd.MarkFlagRequired("output")
+	viper.BindPFlag("html.input", htmlCmd.Flags().Lookup("input"))
+	viper.BindPFlag("html.output", htmlCmd.Flags().Lookup("output"))
+	viper.BindPFlag("html.watch", htmlCmd.Flags().Lookup("watch"))
 }

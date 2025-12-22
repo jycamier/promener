@@ -8,6 +8,7 @@ import (
 	"github.com/jycamier/promener/internal/generator"
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -25,6 +26,11 @@ Examples:
   promener generate nodejs -i metrics.cue -o ./out
   promener generate nodejs -i metrics.cue -o ./out -p myapp`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Get values from Viper
+		inputFile := viper.GetString("input")
+		outputDir := viper.GetString("output")
+		packageName := viper.GetString("nodejs.package")
+
 		// Create output directory if it doesn't exist
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
@@ -44,7 +50,6 @@ Examples:
 		}
 
 		// Determine package name
-		packageName := nodejsPackageName
 		if packageName == "" {
 			packageName = filepath.Base(outputDir)
 		}
@@ -68,4 +73,6 @@ func init() {
 	generateCmd.AddCommand(nodejsCmd)
 
 	nodejsCmd.Flags().StringVarP(&nodejsPackageName, "package", "p", "", "Override package name (optional)")
+
+	viper.BindPFlag("nodejs.package", nodejsCmd.Flags().Lookup("package"))
 }

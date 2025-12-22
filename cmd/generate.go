@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -20,15 +23,29 @@ Use subcommands to specify the target language:
   promener generate go -i metrics.cue -o ./out
   promener generate dotnet -i metrics.cue -o ./out
   promener generate nodejs -i metrics.cue -o ./out`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Only validate if we're running a subcommand
+		if cmd.HasSubCommands() {
+			return nil
+		}
+
+		if viper.GetString("input") == "" {
+			return fmt.Errorf("input file is required (via --input flag or config file)")
+		}
+		if viper.GetString("output") == "" {
+			return fmt.Errorf("output directory is required (via --output flag or config file)")
+		}
+		return nil
+	},
 }
 
 func init() {
 	rootCmd.AddCommand(generateCmd)
 
 	// Persistent flags available to all subcommands
-	generateCmd.PersistentFlags().StringVarP(&inputFile, "input", "i", "", "Input CUE specification file (required)")
-	generateCmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "", "Output directory (required)")
+	generateCmd.PersistentFlags().StringVarP(&inputFile, "input", "i", "", "Input CUE specification file")
+	generateCmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "", "Output directory")
 
-	generateCmd.MarkPersistentFlagRequired("input")
-	generateCmd.MarkPersistentFlagRequired("output")
+	viper.BindPFlag("input", generateCmd.PersistentFlags().Lookup("input"))
+	viper.BindPFlag("output", generateCmd.PersistentFlags().Lookup("output"))
 }

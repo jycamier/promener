@@ -8,6 +8,7 @@ import (
 	"github.com/jycamier/promener/internal/generator"
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -27,8 +28,15 @@ Examples:
   promener generate go -i metrics.cue -o ./out
   promener generate go -i metrics.cue -o ./out --di --fx`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Get values from Viper
+		inputFile := viper.GetString("input")
+		outputDir := viper.GetString("output")
+		packageName := viper.GetString("go.package")
+		di := viper.GetBool("go.di")
+		fx := viper.GetBool("go.fx")
+
 		// Validate DI flags
-		if goGenerateDI && !goGenerateFx {
+		if di && !fx {
 			return fmt.Errorf("--di requires a DI framework flag (--fx)")
 		}
 
@@ -51,7 +59,6 @@ Examples:
 		}
 
 		// Determine package name: -p flag or output directory name
-		packageName := goPackageName
 		if packageName == "" {
 			packageName = filepath.Base(outputDir)
 		}
@@ -64,7 +71,7 @@ Examples:
 		if err != nil {
 			return err
 		}
-		if goGenerateDI && goGenerateFx {
+		if di && fx {
 			err = golangGenerator.GenerateDI(spec)
 			if err != nil {
 				return err
@@ -81,4 +88,8 @@ func init() {
 	goCmd.Flags().StringVarP(&goPackageName, "package", "p", "", "Override package name (optional)")
 	goCmd.Flags().BoolVar(&goGenerateDI, "di", false, "Generate dependency injection code (requires a DI framework flag)")
 	goCmd.Flags().BoolVar(&goGenerateFx, "fx", false, "Use Uber FX framework for DI (use with --di)")
+
+	viper.BindPFlag("go.package", goCmd.Flags().Lookup("package"))
+	viper.BindPFlag("go.di", goCmd.Flags().Lookup("di"))
+	viper.BindPFlag("go.fx", goCmd.Flags().Lookup("fx"))
 }
