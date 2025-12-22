@@ -553,6 +553,44 @@ func runServer(httpMetrics metrics.HttpServerMetrics) {
 
 Each subsystem is provided as an interface for easy mocking in tests.
 
+## Configuration File
+
+Promener supports a `.promener.yaml` configuration file to store your command-line options. This avoids repeating flags for every command.
+
+The tool searches for `.promener.yaml` in the current directory and recursively up to your `$HOME` directory.
+
+Example `.promener.yaml`:
+
+```yaml
+input: metrics.cue
+output: ./gen/metrics
+
+go:
+  package: metrics
+  di: true
+  fx: true
+
+dotnet:
+  package: MyCompany.Metrics
+  di: true
+
+nodejs:
+  package: my-metrics
+
+html:
+  output: docs/metrics.html
+  watch: 5s
+```
+
+When a configuration file is present, you can simply run commands without arguments:
+
+```bash
+promener generate go
+promener html
+```
+
+CLI flags always take precedence over configuration file settings.
+
 ## Command Line Options
 
 ### Vet Command
@@ -789,7 +827,7 @@ See the [example](testdata/with_cue_mod) directory for complete examples.
 - [x] Standardize histogram buckets by business domain (e.g., HTTP latency, DB query duration, queue processing time)
 - [x] Standardize summary objectives by business domain (e.g., background jobs, batch processing, async tasks)
 - [x] Standardize metrics for common usacase
-- [ ] Config file for promener
+- [x] Config file for promener
 - [x] A way to contribute standard / common metrics
 
 ## Contributing
