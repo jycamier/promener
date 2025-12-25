@@ -31,8 +31,11 @@ func isURI(input string) bool {
 }
 
 // loadSpecFromInput loads a spec from either a CUE file path or URI
-func loadSpecFromInput(input string) (*domain.Specification, error) {
+func loadSpecFromInput(input string, rulesDirs []string) (*domain.Specification, error) {
 	v := validator.New()
+	if len(rulesDirs) > 0 {
+		v.SetRulesDirs(rulesDirs)
+	}
 
 	if isURI(input) {
 		// Download CUE from URI to temporary file
@@ -111,6 +114,7 @@ Examples:
 		inputFiles := viper.GetStringSlice("html.input")
 		outputFile := viper.GetString("html.output")
 		watch := viper.GetDuration("html.watch")
+		rulesDirs := viper.GetStringSlice("rules")
 
 		if len(inputFiles) == 0 {
 			return fmt.Errorf("at least one input file is required (via --input flag or config file)")
@@ -125,7 +129,7 @@ Examples:
 
 			if len(inputFiles) == 1 {
 				// Single file or URI: use simple generation
-				spec, err := loadSpecFromInput(inputFiles[0])
+				spec, err := loadSpecFromInput(inputFiles[0], rulesDirs)
 				if err != nil {
 					return fmt.Errorf("failed to load spec: %w", err)
 				}
@@ -138,7 +142,7 @@ Examples:
 				builder = htmlgen.NewBuilder("Aggregated Metrics", "1.0.0")
 
 				for _, inputFile := range inputFiles {
-					spec, err := loadSpecFromInput(inputFile)
+					spec, err := loadSpecFromInput(inputFile, rulesDirs)
 					if err != nil {
 						return fmt.Errorf("failed to load spec %s: %w", inputFile, err)
 					}

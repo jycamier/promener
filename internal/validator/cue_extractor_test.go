@@ -394,7 +394,7 @@ func TestCueExtractor_ExtractFromRealFile(t *testing.T) {
 		t.Fatalf("LoadAndValidate() error = %v", err)
 	}
 
-	if !result.Valid {
+	if result.HasErrors() {
 		t.Fatalf("metrics.cue validation failed: %+v", result)
 	}
 

@@ -32,7 +32,6 @@ func TestFormatter_FormatText_ValidResult(t *testing.T) {
 	f := NewFormatter(FormatText)
 
 	result := &ValidationResult{
-		Valid:        true,
 		CueErrors:    []ValidationError{},
 		DomainErrors: []ValidationError{},
 	}
@@ -51,7 +50,6 @@ func TestFormatter_FormatText_WithErrors(t *testing.T) {
 	f := NewFormatter(FormatText)
 
 	result := &ValidationResult{
-		Valid: false,
 		CueErrors: []ValidationError{
 			{
 				Path:    "services.default.metrics.test",
@@ -112,7 +110,6 @@ func TestFormatter_FormatJSON_ValidResult(t *testing.T) {
 	f := NewFormatter(FormatJSON)
 
 	result := &ValidationResult{
-		Valid:        true,
 		CueErrors:    []ValidationError{},
 		DomainErrors: []ValidationError{},
 	}
@@ -143,7 +140,6 @@ func TestFormatter_FormatJSON_WithErrors(t *testing.T) {
 	f := NewFormatter(FormatJSON)
 
 	result := &ValidationResult{
-		Valid: false,
 		CueErrors: []ValidationError{
 			{
 				Path:    "services.default.metrics.test",
@@ -197,9 +193,7 @@ func TestFormatter_FormatJSON_WithErrors(t *testing.T) {
 func TestFormatter_Format_InvalidFormat(t *testing.T) {
 	f := NewFormatter(OutputFormat("invalid"))
 
-	result := &ValidationResult{
-		Valid: true,
-	}
+	result := &ValidationResult{}
 
 	_, err := f.Format(result)
 	if err == nil {
@@ -220,7 +214,6 @@ func TestValidationResult_HasErrors(t *testing.T) {
 		{
 			name: "no errors",
 			result: ValidationResult{
-				Valid:        true,
 				CueErrors:    []ValidationError{},
 				DomainErrors: []ValidationError{},
 			},
@@ -229,7 +222,6 @@ func TestValidationResult_HasErrors(t *testing.T) {
 		{
 			name: "has CUE errors",
 			result: ValidationResult{
-				Valid: false,
 				CueErrors: []ValidationError{
 					{Message: "test error", Source: "cue"},
 				},
@@ -240,7 +232,6 @@ func TestValidationResult_HasErrors(t *testing.T) {
 		{
 			name: "has domain errors",
 			result: ValidationResult{
-				Valid:     false,
 				CueErrors: []ValidationError{},
 				DomainErrors: []ValidationError{
 					{Message: "test error", Source: "domain"},

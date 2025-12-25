@@ -52,7 +52,7 @@ func (f *Formatter) formatText(result *ValidationResult) string {
 
 	// Header
 	sb.WriteString("\n")
-	if result.Valid && !result.HasErrors() {
+	if !result.HasErrors() {
 		sb.WriteString("✓ Validation passed\n")
 		return sb.String()
 	}
@@ -86,6 +86,22 @@ func (f *Formatter) formatText(result *ValidationResult) string {
 		sb.WriteString("\n")
 	}
 
+	// Rego errors
+	if len(result.RegoErrors) > 0 {
+		sb.WriteString(fmt.Sprintf("Policy Validation Errors (Rego) (%d):\n", len(result.RegoErrors)))
+		for i, err := range result.RegoErrors {
+			severityStr := ""
+			if err.Severity != "" && err.Severity != "error" {
+				severityStr = fmt.Sprintf("[%s] ", strings.ToUpper(err.Severity))
+			}
+			sb.WriteString(fmt.Sprintf("  %d. %s%s\n", i+1, severityStr, err.Message))
+			if err.Path != "" {
+				sb.WriteString(fmt.Sprintf("     Path: %s\n", err.Path))
+			}
+		}
+		sb.WriteString("\n")
+	}
+
 	// Summary
 	sb.WriteString(fmt.Sprintf("Total errors: %d\n", result.TotalErrors()))
 
@@ -99,13 +115,15 @@ func (f *Formatter) formatJSON(result *ValidationResult) (string, error) {
 		TotalErrors  int               `json:"total_errors"`
 		CueErrors    []ValidationError `json:"cue_errors"`
 		DomainErrors []ValidationError `json:"domain_errors"`
+		RegoErrors   []ValidationError `json:"rego_errors"`
 	}
 
 	output := jsonOutput{
-		Valid:        result.Valid && !result.HasErrors(),
+		Valid:        !result.HasErrors(),
 		TotalErrors:  result.TotalErrors(),
 		CueErrors:    result.CueErrors,
 		DomainErrors: result.DomainErrors,
+		RegoErrors:   result.RegoErrors,
 	}
 
 	// Handle nil slices for cleaner JSON output
@@ -114,6 +132,9 @@ func (f *Formatter) formatJSON(result *ValidationResult) (string, error) {
 	}
 	if output.DomainErrors == nil {
 		output.DomainErrors = []ValidationError{}
+	}
+	if output.RegoErrors == nil {
+		output.RegoErrors = []ValidationError{}
 	}
 
 	bytes, err := json.MarshalIndent(output, "", "  ")

@@ -63,8 +63,8 @@ func TestCueLoader_LoadAndValidate(t *testing.T) {
 					t.Error("CueLoader.LoadAndValidate() returned nil result")
 				}
 
-				if result != nil && result.Valid != tt.wantValid {
-					t.Errorf("CueLoader.LoadAndValidate() result.Valid = %v, want %v", result.Valid, tt.wantValid)
+				if result != nil && !result.HasErrors() != tt.wantValid {
+					t.Errorf("CueLoader.LoadAndValidate() valid = %v, want %v", !result.HasErrors(), tt.wantValid)
 				}
 			}
 		})
@@ -190,8 +190,8 @@ this is not valid CUE syntax {{{
 				return
 			}
 
-			if result.Valid != tt.wantValid {
-				t.Errorf("result.Valid = %v, want %v", result.Valid, tt.wantValid)
+			if !result.HasErrors() != tt.wantValid {
+				t.Errorf("valid = %v, want %v", !result.HasErrors(), tt.wantValid)
 			}
 
 			hasErrors := len(result.CueErrors) > 0 || len(result.DomainErrors) > 0
@@ -225,8 +225,8 @@ func TestCueLoader_ModuleSupport(t *testing.T) {
 		t.Error("LoadAndValidate() returned nil result")
 	}
 
-	if result != nil && !result.Valid {
-		t.Errorf("LoadAndValidate() result.Valid = false, expected true")
+	if result != nil && result.HasErrors() {
+		t.Errorf("LoadAndValidate() has errors, expected none")
 		if len(result.CueErrors) > 0 {
 			t.Logf("CUE errors: %+v", result.CueErrors)
 		}

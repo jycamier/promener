@@ -9,7 +9,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile         string
+	rulesDirs       []string
+	severityOnError string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -46,6 +50,11 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .promener.yaml)")
+	rootCmd.PersistentFlags().StringSliceVar(&rulesDirs, "rules", nil, "directories containing Rego rules for validation (repeatable)")
+	rootCmd.PersistentFlags().StringVar(&severityOnError, "severity-on-error", "error", "minimum severity level to trigger exit 1 (error, warning, info)")
+
+	viper.BindPFlag("rules", rootCmd.PersistentFlags().Lookup("rules"))
+	viper.BindPFlag("severity_on_error", rootCmd.PersistentFlags().Lookup("severity-on-error"))
 }
 
 func initConfig() {

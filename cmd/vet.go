@@ -64,22 +64,14 @@ Examples:
 
 		// Create validator and perform validation
 		v := validator.New()
+		if rules := viper.GetStringSlice("rules"); len(rules) > 0 {
+			v.SetRulesDirs(rules)
+		}
 		result, err := v.Validate(cuePath)
 
-		// Handle validation errors
-		var validationFailed bool
-		if err != nil {
-			// Check if it's a validation error (result exists) or a system error
-			if result != nil && result.HasErrors() {
-				validationFailed = true
-			} else {
-				// System error (file not found, invalid CUE, etc.)
-				return fmt.Errorf("validation error: %w", err)
-			}
-		}
-
-		if result.HasErrors() {
-			validationFailed = true
+		// Handle system errors
+		if err != nil && (result == nil || !result.HasErrors()) {
+			return fmt.Errorf("validation error: %w", err)
 		}
 
 		// Format and display results
@@ -91,8 +83,9 @@ Examples:
 
 		fmt.Print(output)
 
-		// Exit with code 1 if validation failed
-		if validationFailed || !result.Valid {
+		// Exit with code 1 if validation failed based on severity threshold
+		threshold := viper.GetString("severity_on_error")
+		if result.Failed(threshold) {
 			os.Exit(1)
 		}
 

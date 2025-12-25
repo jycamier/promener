@@ -40,13 +40,21 @@ Examples:
 
 		// Validate and extract the CUE specification
 		v := validator.New()
+		if rules := viper.GetStringSlice("rules"); len(rules) > 0 {
+			v.SetRulesDirs(rules)
+		}
 		spec, result, err := v.ValidateAndExtract(inputFile)
-		if err != nil || result.HasErrors() {
+		threshold := viper.GetString("severity_on_error")
+
+		if err != nil || result.Failed(threshold) {
 			if result != nil && result.HasErrors() {
 				// Format validation errors
 				formatter := validator.NewFormatter(validator.FormatText)
 				output, _ := formatter.Format(result)
 				fmt.Fprint(os.Stderr, output)
+			}
+			if result != nil && result.Failed(threshold) {
+				return fmt.Errorf("failed to validate specification (threshold: %s)", threshold)
 			}
 			return fmt.Errorf("failed to validate specification: %w", err)
 		}

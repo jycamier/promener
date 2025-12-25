@@ -357,6 +357,7 @@ app.Run();
 ## Documentation
 
 - [CUE Specification](docs/cue-specification.md) - Complete CUE format reference and schema documentation
+- [Rego Validation](docs/rego-validation.md) - Define and enforce validation policies with Rego
 - [Golden Signals](docs/golden-signals.md) - Define and document the four key SRE signals (Latency, Errors, Traffic, Saturation)
 - [Label Validation](docs/label-validation.md) - Using CEL for runtime label validation
 - [Vet Command](docs/vet-command.md) - Validating specifications before code generation

@@ -27,9 +27,9 @@ func NewCueLoader() *CueLoader {
 // Returns the validated CUE value and any validation errors.
 func (l *CueLoader) LoadAndValidate(cuePath string) (cue.Value, *ValidationResult, error) {
 	result := &ValidationResult{
-		Valid:        true,
 		CueErrors:    []ValidationError{},
 		DomainErrors: []ValidationError{},
+		RegoErrors:   []ValidationError{},
 	}
 
 	// Convert to absolute path
@@ -92,7 +92,6 @@ func (l *CueLoader) LoadAndValidate(cuePath string) (cue.Value, *ValidationResul
 
 	// Validate
 	if err := unified.Validate(cue.Concrete(true), cue.All()); err != nil {
-		result.Valid = false
 		cueErrors := l.extractCueErrors(err)
 		result.CueErrors = append(result.CueErrors, cueErrors...)
 	}
@@ -111,10 +110,11 @@ func (l *CueLoader) extractCueErrors(err error) []ValidationError {
 		path := l.extractPath(e)
 
 		validationErrors = append(validationErrors, ValidationError{
-			Path:    path,
-			Message: strings.TrimSpace(e.Error()),
-			Source:  "cue",
-			Line:    pos.Line(),
+			Path:     path,
+			Message:  strings.TrimSpace(e.Error()),
+			Source:   "cue",
+			Severity: "error",
+			Line:     pos.Line(),
 		})
 	}
 
