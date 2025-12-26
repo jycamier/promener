@@ -86,6 +86,88 @@ Or configure it in `.promener.yaml`:
 rules: ./rules
 ```
 
+## Rule Sources
+
+Promener supports loading rules from multiple sources: local directories, Git repositories, and HTTP URLs.
+
+### Local Directory
+
+```bash
+promener vet metrics.cue --rules ./rules
+```
+
+### Git Repository
+
+Use the `github:`, `gitlab:`, or `bitbucket:` prefix:
+
+```bash
+# Latest commit (HEAD)
+promener vet metrics.cue --rules github:myorg/shared-rules
+
+# Specific tag
+promener vet metrics.cue --rules github:myorg/shared-rules@v1.0.0
+
+# Specific branch
+promener vet metrics.cue --rules github:myorg/shared-rules#main
+```
+
+### HTTP URL
+
+Download rules from a URL (supports `.tar.gz`, `.zip`, or single `.rego` files):
+
+```bash
+promener vet metrics.cue --rules https://example.com/rules.tar.gz
+```
+
+### Combining Sources
+
+Multiple sources can be combined:
+
+```bash
+promener vet metrics.cue \
+  --rules ./local-rules \
+  --rules github:myorg/shared-rules@v1.0.0
+```
+
+Or in `.promener.yaml`:
+
+```yaml
+rules:
+  - ./local-rules
+  - github:myorg/shared-rules@v1.0.0
+```
+
+### Composable Rule Sets
+
+If a source contains a `.promener.yaml` file at its root, Promener reads the `rules:` field and resolves them recursively. This enables composable rule sets:
+
+```yaml
+# github:myorg/shared-rules/.promener.yaml
+rules:
+  - ./prometheus     # Local subdirectory
+  - ./naming         # Another subdirectory
+  - github:myorg/base-rules@v1.0.0  # External dependency
+```
+
+### Cache
+
+Remote sources are cached in `~/.promener/cache/` with a 1-hour TTL. Override the cache directory with:
+
+```bash
+PROMENER_CACHE_DIR=/tmp/cache promener vet metrics.cue --rules github:myorg/rules
+```
+
+### Authentication
+
+For private repositories, set the appropriate token:
+
+| Host | Environment Variable |
+|------|---------------------|
+| GitHub | `GITHUB_TOKEN` |
+| GitLab | `GITLAB_TOKEN` |
+| Bitbucket | `BITBUCKET_TOKEN` |
+| Any | `GIT_TOKEN` (fallback) |
+
 ## Severity Levels
 
 You can control which severity level causes the validation to fail (exit code 1) using the `--severity-on-error` flag.

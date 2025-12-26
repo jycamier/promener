@@ -3,8 +3,6 @@ package validator
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
@@ -28,26 +26,16 @@ func (v *RegoValidator) Validate(ctx context.Context, input interface{}) ([]Vali
 		return nil, nil
 	}
 
-	// Load rego files from all directories
-	var regoFiles []string
-	for _, rulesDir := range v.rulesDirs {
-		// Check if rules directory exists
-		if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
-			return nil, fmt.Errorf("rules directory does not exist: %s", rulesDir)
-		}
+	// Use RuleSourceResolver to load rules from all sources (local, HTTP, Git)
+	resolver := NewRuleSourceResolver()
 
-		err := filepath.Walk(rulesDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() && filepath.Ext(path) == ".rego" {
-				regoFiles = append(regoFiles, path)
-			}
-			return nil
-		})
+	var regoFiles []string
+	for _, source := range v.rulesDirs {
+		files, err := resolver.Load(ctx, source)
 		if err != nil {
-			return nil, fmt.Errorf("failed to walk rules directory %s: %w", rulesDir, err)
+			return nil, fmt.Errorf("failed to load rules from %s: %w", source, err)
 		}
+		regoFiles = append(regoFiles, files...)
 	}
 
 	if len(regoFiles) == 0 {
