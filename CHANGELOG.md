@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.2.0](https://github.com/jycamier/promener/compare/v1.1.0...v1.2.0) (2025-12-26)
+
+
+### Features
+
+* add golden signals schema ([6157e3c](https://github.com/jycamier/promener/commit/6157e3c674d3cf2e419121e3945d20bdfcfbd9c8))
+* add support for persistent configuration files ([874c75b](https://github.com/jycamier/promener/commit/874c75bf75f4a81eb54159b4319ea52be9c3f8bf))
+* **docs:** add golden signals for HTML generation ([fb701fa](https://github.com/jycamier/promener/commit/fb701fa289d9bd34bff0011657f9a88ab0720576))
+* **docs:** rework html labels integration ([a26bfab](https://github.com/jycamier/promener/commit/a26bfabcab0fb2d0049ebb4f7f95187e926627fc))
+* implement OPA/Rego policy validation ([6b11847](https://github.com/jycamier/promener/commit/6b11847d6a77f6255984f138eb0d976ed7c398f8))
+* **schema:** add metric.Name to override standard behavior ([aa4cdbb](https://github.com/jycamier/promener/commit/aa4cdbb7ba001c9c879c421c743efd3e25dc25e2))
+* support remote rule sources (Git, HTTP) with caching ([6357754](https://github.com/jycamier/promener/commit/63577544a364311bfdb790104d2377cdb7b6d59e))
+
+
+### Documentation
+
+* about configuration file ([0fb4c0b](https://github.com/jycamier/promener/commit/0fb4c0b2e4dd2653cd52a3bf6d679750172c1a8f))
+* about golden signals ([fe5ecd5](https://github.com/jycamier/promener/commit/fe5ecd5faa27db66c5aa9f5c0a54fcca270330b0))
+* udpate ([be4dd98](https://github.com/jycamier/promener/commit/be4dd980b7ad4dbad6108905e198bdc5b5d4ac24))
+
 ## [1.1.0](https://github.com/jycamier/promener/compare/v1.0.0...v1.1.0) (2025-11-12)
 
 
