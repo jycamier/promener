@@ -12,6 +12,7 @@ import (
 
 	"github.com/jycamier/promener/internal/domain"
 	"github.com/jycamier/promener/internal/htmlgen"
+	"github.com/jycamier/promener/internal/logging"
 	"github.com/jycamier/promener/internal/signals"
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
@@ -34,46 +35,67 @@ func isURI(input string) bool {
 func loadSpecFromInput(input string, rulesDirs []string) (*domain.Specification, error) {
 	v := validator.New()
 	if len(rulesDirs) > 0 {
+		logging.Debug("loading rego rules", "directories", rulesDirs)
 		v.SetRulesDirs(rulesDirs)
 	}
 
 	if isURI(input) {
+		logging.Debug("fetching specification from URI", "uri", input)
 		// Download CUE from URI to temporary file
 		resp, err := http.Get(input)
 		if err != nil {
+			logging.Error("failed to fetch URI", "uri", input, "error", err)
 			return nil, fmt.Errorf("failed to fetch URI: %w", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
+			logging.Error("HTTP request failed", "uri", input, "status", resp.StatusCode)
 			return nil, fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
 		}
 
 		// Create temp file for the downloaded CUE
 		tmpFile, err := os.CreateTemp("", "promener_*.cue")
 		if err != nil {
+			logging.Error("failed to create temp file", "error", err)
 			return nil, fmt.Errorf("failed to create temp file: %w", err)
 		}
 		defer os.Remove(tmpFile.Name())
 		defer tmpFile.Close()
 
+		logging.Debug("writing downloaded content to temp file", "temp_file", tmpFile.Name())
 		// Write downloaded content
 		if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+			logging.Error("failed to write temp file", "error", err)
 			return nil, fmt.Errorf("failed to write temp file: %w", err)
 		}
 
 		// Validate and extract from temp file
+		logging.Debug("validating specification from URI", "uri", input)
 		spec, result, err := v.ValidateAndExtract(tmpFile.Name())
-		if err != nil || result.HasErrors() {
+		if err != nil {
+			logging.Error("validation failed for URI", "uri", input, "error", err)
 			return nil, fmt.Errorf("validation failed for URI %s: %w", input, err)
+		}
+		if result.HasErrors() {
+			errorCount := len(result.CueErrors) + len(result.DomainErrors) + len(result.RegoErrors)
+			logging.Error("validation errors for URI", "uri", input, "error_count", errorCount)
+			return nil, fmt.Errorf("validation failed for URI %s: specification contains %d errors", input, errorCount)
 		}
 		return spec, nil
 	}
 
 	// Local file
+	logging.Debug("loading specification from file", "file", input)
 	spec, result, err := v.ValidateAndExtract(input)
-	if err != nil || result.HasErrors() {
-		return nil, fmt.Errorf("validation failed: %w", err)
+	if err != nil {
+		logging.Error("validation failed", "file", input, "error", err)
+		return nil, fmt.Errorf("validation failed for %s: %w", input, err)
+	}
+	if result.HasErrors() {
+		errorCount := len(result.CueErrors) + len(result.DomainErrors) + len(result.RegoErrors)
+		logging.Error("validation errors", "file", input, "error_count", errorCount)
+		return nil, fmt.Errorf("validation failed for %s: specification contains %d errors", input, errorCount)
 	}
 	return spec, nil
 }
@@ -116,6 +138,13 @@ Examples:
 		watch := viper.GetDuration("html.watch")
 		rulesDirs := viper.GetStringSlice("rules")
 
+		logging.Info("generating HTML documentation", "output", outputFile)
+		logging.Debug("html options",
+			"input_files", inputFiles,
+			"watch", watch,
+			"rules", rulesDirs,
+		)
+
 		if len(inputFiles) == 0 {
 			return fmt.Errorf("at least one input file is required (via --input flag or config file)")
 		}
@@ -129,19 +158,24 @@ Examples:
 
 			if len(inputFiles) == 1 {
 				// Single file or URI: use simple generation
+				logging.Debug("loading single specification", "input", inputFiles[0])
 				spec, err := loadSpecFromInput(inputFiles[0], rulesDirs)
 				if err != nil {
 					return fmt.Errorf("failed to load spec: %w", err)
 				}
 
+				logging.Debug("generating HTML from single spec")
 				generator := htmlgen.NewGenerator()
 				if err := generator.GenerateFile(spec, outputFile); err != nil {
+					logging.Error("failed to generate HTML", "error", err)
 					return fmt.Errorf("failed to generate HTML: %w", err)
 				}
 			} else {
+				logging.Debug("aggregating multiple specifications", "count", len(inputFiles))
 				builder = htmlgen.NewBuilder("Aggregated Metrics", "1.0.0")
 
 				for _, inputFile := range inputFiles {
+					logging.Debug("loading specification", "input", inputFile)
 					spec, err := loadSpecFromInput(inputFile, rulesDirs)
 					if err != nil {
 						return fmt.Errorf("failed to load spec %s: %w", inputFile, err)
@@ -149,7 +183,9 @@ Examples:
 					builder.AddFromSpec(spec)
 				}
 
+				logging.Debug("building aggregated HTML")
 				if err := builder.Build(outputFile); err != nil {
+					logging.Error("failed to generate HTML", "error", err)
 					return fmt.Errorf("failed to generate HTML: %w", err)
 				}
 			}
@@ -161,10 +197,12 @@ Examples:
 		if err := generateHTML(); err != nil {
 			return err
 		}
+		logging.Info("HTML documentation generated", "output", outputFile)
 		fmt.Printf("✓ Generated HTML documentation: %s\n", outputFile)
 
 		// Watch mode
 		if watch > 0 {
+			logging.Info("starting watch mode", "interval", watch)
 			fmt.Printf("👀 Watching for changes (every %s)... Press Ctrl+C to stop\n", watch)
 
 			// Setup context with signal handling for graceful shutdown
@@ -178,13 +216,17 @@ Examples:
 			for {
 				select {
 				case <-ctx.Done():
+					logging.Info("received shutdown signal, stopping watch mode")
 					fmt.Printf("\n✓ Received shutdown signal, stopping watch mode...\n")
 					return nil
 				case <-ticker.C:
+					logging.Debug("regenerating HTML")
 					if err := generateHTML(); err != nil {
+						logging.Error("error regenerating HTML (will retry)", "error", err)
 						fmt.Printf("⚠ Error regenerating HTML: %v\n", err)
 						continue
 					}
+					logging.Debug("HTML regenerated successfully")
 					fmt.Printf("✓ Regenerated HTML documentation: %s (%s)\n", outputFile, time.Now().Format("15:04:05"))
 				}
 			}

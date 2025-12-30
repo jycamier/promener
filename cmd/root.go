@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/jycamier/promener/internal/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -13,6 +15,8 @@ var (
 	cfgFile         string
 	rulesDirs       []string
 	severityOnError string
+	verbosity       int
+	logFormat       string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -35,6 +39,32 @@ Example workflow:
 1. Define metrics in YAML with namespace, subsystem, type, and labels
 2. Generate code: promener generate -i metrics.yaml -o metrics.{ext}
 3. Use in your application with a clean, structured API`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Get verbosity: flag takes precedence over config
+		v := verbosity
+		if v == 0 {
+			v = viper.GetInt("logger.level")
+		}
+
+		// Get format: flag takes precedence over config
+		format := logFormat
+		if format == "" {
+			format = viper.GetString("logger.format")
+		}
+		if format == "" {
+			format = "text"
+		}
+
+		logging.Init(v, os.Stderr, format)
+
+		logging.Debug("configuration loaded",
+			"config_file", viper.ConfigFileUsed(),
+			"verbosity", v,
+			"log_format", format,
+		)
+
+		return nil
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -53,8 +83,14 @@ func init() {
 	rootCmd.PersistentFlags().StringSliceVar(&rulesDirs, "rules", nil, "directories containing Rego rules for validation (repeatable)")
 	rootCmd.PersistentFlags().StringVar(&severityOnError, "severity-on-error", "error", "minimum severity level to trigger exit 1 (error, warning, info)")
 
+	// Logging flags
+	rootCmd.PersistentFlags().CountVarP(&verbosity, "verbose", "v", "increase verbosity (-v=warn, -vv=info, -vvv=debug, -vvvv=trace)")
+	rootCmd.PersistentFlags().StringVar(&logFormat, "log-format", "", "log output format: text or json (default: text)")
+
 	viper.BindPFlag("rules", rootCmd.PersistentFlags().Lookup("rules"))
 	viper.BindPFlag("severity_on_error", rootCmd.PersistentFlags().Lookup("severity-on-error"))
+	viper.BindPFlag("logger.level", rootCmd.PersistentFlags().Lookup("verbose"))
+	viper.BindPFlag("logger.format", rootCmd.PersistentFlags().Lookup("log-format"))
 }
 
 func initConfig() {
@@ -83,7 +119,12 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		// Optional: fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	if err := viper.ReadInConfig(); err != nil {
+		// Config file not found is acceptable - user may not have one
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			// Config file was found but has errors (e.g., malformed YAML)
+			// Note: Can't use logging.Error here because logging isn't initialized yet
+			fmt.Fprintf(os.Stderr, "Warning: error reading config file: %v\n", err)
+		}
 	}
 }

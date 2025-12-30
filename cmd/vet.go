@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/jycamier/promener/internal/logging"
 	"github.com/jycamier/promener/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -62,22 +63,38 @@ Examples:
 			return fmt.Errorf("invalid format: %s (must be 'text' or 'json')", formatStr)
 		}
 
+		logging.Info("validating specification", "file", cuePath)
+		logging.Debug("validation options",
+			"format", formatStr,
+			"rules", viper.GetStringSlice("rules"),
+			"severity_threshold", viper.GetString("severity_on_error"),
+		)
+
 		// Create validator and perform validation
 		v := validator.New()
 		if rules := viper.GetStringSlice("rules"); len(rules) > 0 {
+			logging.Debug("loading rego rules", "directories", rules)
 			v.SetRulesDirs(rules)
 		}
 		result, err := v.Validate(cuePath)
 
 		// Handle system errors
 		if err != nil && (result == nil || !result.HasErrors()) {
+			logging.Error("validation system error", "error", err)
 			return fmt.Errorf("validation error: %w", err)
 		}
+
+		logging.Debug("validation complete",
+			"cue_errors", len(result.CueErrors),
+			"domain_errors", len(result.DomainErrors),
+			"rego_errors", len(result.RegoErrors),
+		)
 
 		// Format and display results
 		formatter := validator.NewFormatter(format)
 		output, err := formatter.Format(result)
 		if err != nil {
+			logging.Error("failed to format output", "error", err)
 			return fmt.Errorf("failed to format output: %w", err)
 		}
 
@@ -86,9 +103,11 @@ Examples:
 		// Exit with code 1 if validation failed based on severity threshold
 		threshold := viper.GetString("severity_on_error")
 		if result.Failed(threshold) {
+			logging.Debug("validation failed threshold", "threshold", threshold)
 			os.Exit(1)
 		}
 
+		logging.Info("validation successful")
 		return nil
 	},
 }
