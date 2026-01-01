@@ -24,6 +24,13 @@ Use subcommands to specify the target language:
   promener generate dotnet -i metrics.cue -o ./out
   promener generate nodejs -i metrics.cue -o ./out`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Call parent's PersistentPreRunE first (initializes logging)
+		if rootCmd.PersistentPreRunE != nil {
+			if err := rootCmd.PersistentPreRunE(cmd, args); err != nil {
+				return err
+			}
+		}
+
 		// Only validate if we're running a subcommand
 		if cmd.HasSubCommands() {
 			return nil

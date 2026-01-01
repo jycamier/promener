@@ -26,8 +26,15 @@ Arguments:
   file              Path to CUE specification file (required)
 
 Flags:
-  --format string   Output format: "text" or "json" (default "text")
-  -h, --help        Help for vet command
+  -f, --format string   Output format: "text" or "json" (default "text")
+  -h, --help            Help for vet command
+
+Global Flags:
+      --config string              Config file (default: .promener.yaml)
+      --log-format string          Log format: text or json (default: text)
+      --rules strings              Rego rule directories (repeatable)
+      --severity-on-error string   Exit 1 threshold (default: error)
+  -v, --verbose count              Increase verbosity (-v, -vv, -vvv, -vvvv)
 ```
 
 ## What Gets Validated
@@ -266,6 +273,69 @@ Make it executable:
 chmod +x .git/hooks/pre-commit
 ```
 
+## Logging and Verbosity
+
+Control the amount of diagnostic output with the `-v` flag:
+
+```bash
+# Default: errors only (quiet)
+promener vet metrics.cue
+
+# Warnings and errors
+promener vet metrics.cue -v
+
+# Info level (see validation progress)
+promener vet metrics.cue -vv
+
+# Debug level (detailed diagnostics)
+promener vet metrics.cue -vvv
+```
+
+### Verbosity Levels
+
+| Flag | Level | What You See |
+|------|-------|--------------|
+| (none) | ERROR | Only errors |
+| `-v` | WARN | Warnings + errors |
+| `-vv` | INFO | Progress + warnings + errors |
+| `-vvv` | DEBUG | Detailed diagnostics |
+| `-vvvv` | TRACE | Very verbose output |
+
+### Log Format
+
+Use `--log-format` for different output formats:
+
+```bash
+# Human-readable (default)
+promener vet metrics.cue -vv
+
+# JSON for parsing/CI
+promener vet metrics.cue -vv --log-format=json
+```
+
+**Text output:**
+```
+time=2024-01-15T10:30:00.000+01:00 level=INFO msg="validating specification" file=metrics.cue
+time=2024-01-15T10:30:00.005+01:00 level=DEBUG msg="validation complete" cue_errors=0 domain_errors=0
+```
+
+**JSON output:**
+```json
+{"time":"2024-01-15T10:30:00.000+01:00","level":"INFO","msg":"validating specification","file":"metrics.cue"}
+```
+
+### Configuration File
+
+Set defaults in `.promener.yaml`:
+
+```yaml
+logger:
+  level: 2      # INFO level
+  format: text
+```
+
+See [Configuration](configuration.md) for more details.
+
 ## Exit Codes
 
 The vet command uses standard exit codes:
@@ -481,7 +551,20 @@ For CI/CD, this overhead is negligible compared to build times.
 
 ### Enable Verbose Output
 
-For detailed debugging, use CUE's built-in tools:
+Use the `-v` flag for detailed debugging:
+
+```bash
+# See validation progress
+promener vet metrics.cue -vv
+
+# Full debug output
+promener vet metrics.cue -vvv
+
+# JSON format for parsing
+promener vet metrics.cue -vvv --log-format=json
+```
+
+For CUE-specific issues, use CUE's built-in tools:
 
 ```bash
 # Check CUE syntax
@@ -533,6 +616,8 @@ metrics: {
 
 ## See Also
 
+- [Configuration](configuration.md) - Configuration file and environment variables
 - [CUE Specification](cue-specification.md) - Complete CUE format reference
 - [Label Validation](label-validation.md) - CEL validation expressions
+- [Rego Validation](rego-validation.md) - Custom policy rules
 - [CUE Language](https://cuelang.org/) - Official CUE documentation
